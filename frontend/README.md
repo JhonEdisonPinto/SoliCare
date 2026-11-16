@@ -1,6 +1,8 @@
 # Frontend
 
 Panel web de SoliCare construido con React, Vite y TypeScript.
+La interfaz está optimizada para escritorio, tablet y celular, con navegación
+lateral desplegable en pantallas pequeñas.
 
 Panel web para familiares, cuidadores y personal de la central de control.
 
