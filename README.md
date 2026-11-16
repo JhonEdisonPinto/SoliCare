@@ -130,4 +130,3 @@ El documento de referencia del proyecto es `Informe_E1.docx`. El hardware
 descrito usa ESP32-C3, MPU6050 y MAX30102; también contempla una pre-alerta
 local con vibración y botón para cancelar falsas alarmas. La plataforma no usa
 cámaras ni rastrea la ubicación.
-

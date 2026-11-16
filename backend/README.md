@@ -25,4 +25,3 @@ src/
 La API debe responder rápidamente al dispositivo. Las notificaciones y tareas
 de vigilancia deben ejecutarse de forma asíncrona para no bloquear la respuesta
 de ingestión.
-

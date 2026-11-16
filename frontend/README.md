@@ -12,4 +12,3 @@ Panel web para familiares, cuidadores y personal de la central de control.
 
 La persona mayor no necesita operar este panel ni usar una aplicación para que
 el dispositivo funcione.
-
