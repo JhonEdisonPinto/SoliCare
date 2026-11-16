@@ -53,7 +53,7 @@ export async function registerTelemetryRoutes(app: FastifyInstance): Promise<voi
     const receivedAt = new Date();
     await saveTelemetry(request.body, receivedAt);
 
-    return reply.code(201).send({
+    return reply.code(200).send({
       received: true,
       device_id: request.body.device_id,
       received_at: receivedAt.toISOString(),
