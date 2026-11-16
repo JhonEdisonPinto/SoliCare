@@ -24,6 +24,7 @@ import {
   Wifi,
   X,
 } from 'lucide-react';
+import { isOnline, timeAgo, useTelemetry } from './lib/api';
 
 type ActivityItem = {
   icon: typeof Activity;
@@ -57,6 +58,24 @@ const activities: ActivityItem[] = [
   },
 ];
 
+const people = [
+  { name: 'María González', initials: 'MG', relation: 'Mamá', deviceId: 'proto-01', color: 'purple' },
+  { name: 'Carlos Ruiz', initials: 'CR', relation: 'Papá', deviceId: 'proto-02', color: 'blue' },
+  { name: 'Elena Martínez', initials: 'EM', relation: 'Abuela', deviceId: 'proto-03', color: 'orange' },
+  { name: 'Jorge Ramírez', initials: 'JR', relation: 'Tío', deviceId: 'proto-04', color: 'teal' },
+];
+
+function buildChart(values: number[]) {
+  if (values.length < 2) return null;
+  const points = values.map((value, index) => {
+    const x = (index / (values.length - 1)) * 640;
+    const y = 154 - ((Math.min(100, Math.max(85, value)) - 85) / 15) * 144;
+    return [x, y] as const;
+  });
+  const line = points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  return { line, fill: `${line} L640,160 L0,160 Z`, last: points[points.length - 1] };
+}
+
 const navItems = [
   { label: 'Resumen', icon: LayoutDashboard },
   { label: 'Personas', icon: UsersRound },
@@ -69,6 +88,18 @@ function App() {
   const [selectedNav, setSelectedNav] = useState('Resumen');
   const [selectedPerson, setSelectedPerson] = useState('María González');
   const [showAlert, setShowAlert] = useState(true);
+
+  const person = people.find((item) => item.name === selectedPerson) ?? people[0];
+  const { devices, readings, error } = useTelemetry(person.deviceId);
+  const deviceById = new Map(devices.map((device) => [device.device_id, device]));
+  const selectedDevice = deviceById.get(person.deviceId);
+  const onlineCount = people.filter((item) => isOnline(deviceById.get(item.deviceId))).length;
+  const staleDevice = people.find((item) => {
+    const device = deviceById.get(item.deviceId);
+    return device && !isOnline(device);
+  });
+  const chart = buildChart(readings.map((reading) => reading.spo2));
+  const vitalStatus = (ok: boolean) => (selectedDevice ? (ok ? 'En rango normal' : 'Fuera de rango') : 'Sin datos');
 
   return (
     <div className="app-shell">
@@ -152,7 +183,7 @@ function App() {
           <div className="topbar-actions">
             <div className="connection-status">
               <span className="pulse-dot" />
-              <span>Sistema operativo</span>
+              <span>{error ? 'Sin conexión con el servidor' : 'Sistema operativo'}</span>
             </div>
             <button className="icon-button notification-button" aria-label="Notificaciones">
               <Bell size={19} />
@@ -172,12 +203,12 @@ function App() {
             <button className="primary-button"><Plus size={18} /> Añadir persona</button>
           </section>
 
-          {showAlert && (
+          {showAlert && staleDevice && (
             <section className="alert-banner">
               <div className="alert-banner-icon"><AlertTriangle size={20} /></div>
               <div className="alert-banner-copy">
                 <strong>Revisa una conexión</strong>
-                <p>El dispositivo de <b>Elena Martínez</b> no reporta datos desde hace 32 minutos.</p>
+                <p>El dispositivo de <b>{staleDevice.name}</b> no reporta datos {timeAgo(deviceById.get(staleDevice.deviceId)?.last_seen_at).replace('hace', 'desde hace')}.</p>
               </div>
               <button className="outline-button">Ver dispositivo <ChevronRight size={15} /></button>
               <button className="close-button" onClick={() => setShowAlert(false)} aria-label="Cerrar alerta"><X size={17} /></button>
@@ -186,7 +217,7 @@ function App() {
 
           <section className="stats-grid">
             <StatCard label="Personas monitoreadas" value="4" detail="+1 este mes" icon={UsersRound} tone="purple" />
-            <StatCard label="Dispositivos conectados" value="3 / 4" detail="75% en línea" icon={Wifi} tone="green" />
+            <StatCard label="Dispositivos conectados" value={`${onlineCount} / ${people.length}`} detail={`${Math.round((onlineCount / people.length) * 100)}% en línea`} icon={Wifi} tone="green" />
             <StatCard label="Alertas atendidas" value="12" detail="Todas respondidas" icon={ShieldCheck} tone="blue" />
             <StatCard label="Tiempo de respuesta" value="2:14" detail="Promedio este mes" icon={Clock3} tone="amber" />
           </section>
@@ -201,20 +232,18 @@ function App() {
                 <div className="select-wrap">
                   <UserRound size={15} />
                   <select value={selectedPerson} onChange={(event) => setSelectedPerson(event.target.value)} aria-label="Seleccionar persona">
-                    <option>María González</option>
-                    <option>Carlos Ruiz</option>
-                    <option>Elena Martínez</option>
+                    {people.map((item) => <option key={item.deviceId}>{item.name}</option>)}
                   </select>
                   <ChevronDown size={14} />
                 </div>
               </div>
               <div className="vitals-row">
-                <VitalCard label="Pulso" value="74" unit="lpm" status="En rango normal" icon={HeartPulse} tone="coral" />
-                <VitalCard label="Saturación SpO2" value="97" unit="%" status="En rango normal" icon={Activity} tone="teal" />
+                <VitalCard label="Pulso" value={selectedDevice?.pulso?.toString() ?? '--'} unit="lpm" status={vitalStatus((selectedDevice?.pulso ?? 0) >= 40 && (selectedDevice?.pulso ?? 0) <= 120)} icon={HeartPulse} tone="coral" />
+                <VitalCard label="Saturación SpO2" value={selectedDevice?.spo2?.toString() ?? '--'} unit="%" status={vitalStatus((selectedDevice?.spo2 ?? 0) >= 92)} icon={Activity} tone="teal" />
               </div>
               <div className="chart-area">
                 <div className="chart-labels"><span>100</span><span>95</span><span>90</span><span>85</span></div>
-                <svg className="health-chart" viewBox="0 0 640 160" preserveAspectRatio="none" role="img" aria-label="Gráfico de saturación de oxígeno de las últimas 24 horas">
+                <svg className="health-chart" viewBox="0 0 640 160" preserveAspectRatio="none" role="img" aria-label="Gráfico de saturación de oxígeno de las últimas lecturas">
                   <defs>
                     <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
                       <stop offset="0%" stopColor="#38bfa0" stopOpacity=".22" />
@@ -222,15 +251,19 @@ function App() {
                     </linearGradient>
                   </defs>
                   <path className="chart-grid-line" d="M0 10 H640 M0 58 H640 M0 106 H640 M0 154 H640" />
-                  <path className="chart-fill" d="M0,76 C24,69 32,81 51,71 S86,65 106,75 S136,89 155,73 S179,60 204,68 S229,83 248,68 S281,73 302,58 S327,69 349,64 S375,81 397,68 S421,63 442,72 S464,60 487,63 S512,78 530,67 S556,56 578,67 S608,73 640,57 L640,160 L0,160 Z" />
-                  <path className="chart-line" d="M0,76 C24,69 32,81 51,71 S86,65 106,75 S136,89 155,73 S179,60 204,68 S229,83 248,68 S281,73 302,58 S327,69 349,64 S375,81 397,68 S421,63 442,72 S464,60 487,63 S512,78 530,67 S556,56 578,67 S608,73 640,57" />
-                  <circle className="chart-point" cx="530" cy="67" r="4" />
+                  {chart && (
+                    <>
+                      <path className="chart-fill" d={chart.fill} />
+                      <path className="chart-line" d={chart.line} />
+                      <circle className="chart-point" cx={chart.last[0]} cy={chart.last[1]} r="4" />
+                    </>
+                  )}
                 </svg>
-                <div className="chart-times"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>Ahora</span></div>
+                <div className="chart-times"><span>Anterior</span><span>Ahora</span></div>
               </div>
               <div className="panel-footer">
                 <span><span className="legend-dot teal" /> SpO2</span>
-                <span className="last-updated">Última lectura hace 2 minutos</span>
+                <span className="last-updated">Última lectura {timeAgo(selectedDevice?.last_seen_at)}</span>
               </div>
             </section>
 
@@ -243,10 +276,20 @@ function App() {
                 <button className="text-button">Ver todas <ChevronRight size={15} /></button>
               </div>
               <div className="people-list">
-                <PersonRow initials="MG" name="María González" relation="Mamá · proto-01" status="Conectada" color="purple" />
-                <PersonRow initials="CR" name="Carlos Ruiz" relation="Papá · proto-02" status="Conectado" color="blue" />
-                <PersonRow initials="EM" name="Elena Martínez" relation="Abuela · proto-03" status="Sin conexión" color="orange" offline />
-                <PersonRow initials="JR" name="Jorge Ramírez" relation="Tío · proto-04" status="Conectado" color="teal" />
+                {people.map((item) => {
+                  const online = isOnline(deviceById.get(item.deviceId));
+                  return (
+                    <PersonRow
+                      key={item.deviceId}
+                      initials={item.initials}
+                      name={item.name}
+                      relation={`${item.relation} · ${item.deviceId}`}
+                      status={online ? 'Conectado' : 'Sin conexión'}
+                      color={item.color}
+                      offline={!online}
+                    />
+                  );
+                })}
               </div>
               <button className="add-person-button"><Plus size={16} /> Añadir una persona</button>
             </section>
@@ -275,8 +318,8 @@ function App() {
               </div>
               <div className="fall-metric">
                 <span>Último movimiento</span>
-                <strong>Hace 3 min</strong>
-                <small>María González · proto-01</small>
+                <strong>{selectedDevice ? timeAgo(selectedDevice.last_seen_at) : 'Sin datos'}</strong>
+                <small>{person.name} · {person.deviceId}</small>
               </div>
               <div className="fall-metric">
                 <span>Eventos este mes</span>

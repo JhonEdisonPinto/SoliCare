@@ -72,3 +72,52 @@ export async function checkDatabase(): Promise<boolean> {
     return false;
   }
 }
+
+export type DeviceSummary = {
+  device_id: string;
+  last_seen_at: string;
+  last_type: string | null;
+  spo2: number | null;
+  pulso: number | null;
+};
+
+export type TelemetryReading = {
+  type: string;
+  spo2: number;
+  pulso: number;
+  received_at: string;
+};
+
+export async function listDevices(): Promise<DeviceSummary[]> {
+  if (!pool) {
+    throw new Error('DATABASE_URL is not configured');
+  }
+
+  const result = await pool.query(
+    `SELECT d.device_id, d.last_seen_at, t.type AS last_type, t.spo2, t.pulse AS pulso
+     FROM devices d
+     LEFT JOIN LATERAL (
+       SELECT type, spo2, pulse FROM telemetry
+       WHERE device_id = d.device_id
+       ORDER BY received_at DESC LIMIT 1
+     ) t ON TRUE
+     ORDER BY d.device_id`,
+  );
+  return result.rows;
+}
+
+export async function listTelemetry(deviceId: string, limit: number): Promise<TelemetryReading[]> {
+  if (!pool) {
+    throw new Error('DATABASE_URL is not configured');
+  }
+
+  const result = await pool.query(
+    `SELECT type, spo2, pulse AS pulso, received_at
+     FROM telemetry
+     WHERE device_id = $1
+     ORDER BY received_at DESC
+     LIMIT $2`,
+    [deviceId, limit],
+  );
+  return result.rows.reverse();
+}

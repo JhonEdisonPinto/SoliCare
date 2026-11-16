@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { env } from '../config/env.js';
-import { saveTelemetry } from '../db/database.js';
+import { listDevices, listTelemetry, saveTelemetry } from '../db/database.js';
 import type { TelemetryPayload, TelemetryType } from '../types/telemetry.js';
 
 const validTypes: TelemetryType[] = ['lectura', 'caida'];
@@ -59,4 +59,15 @@ export async function registerTelemetryRoutes(app: FastifyInstance): Promise<voi
       received_at: receivedAt.toISOString(),
     });
   });
+
+  app.get('/api/v1/devices', async () => ({ devices: await listDevices() }));
+
+  app.get<{ Params: { deviceId: string }; Querystring: { limit?: string } }>(
+    '/api/v1/devices/:deviceId/telemetry',
+    async (request) => {
+      const requested = Number(request.query.limit ?? 50);
+      const limit = Number.isInteger(requested) ? Math.min(Math.max(requested, 1), 500) : 50;
+      return { device_id: request.params.deviceId, readings: await listTelemetry(request.params.deviceId, limit) };
+    },
+  );
 }
