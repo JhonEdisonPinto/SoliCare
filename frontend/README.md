@@ -1,5 +1,7 @@
 # Frontend
 
+Panel web de SoliCare construido con React, Vite y TypeScript.
+
 Panel web para familiares, cuidadores y personal de la central de control.
 
 ## Vistas previstas
@@ -12,3 +14,11 @@ Panel web para familiares, cuidadores y personal de la central de control.
 
 La persona mayor no necesita operar este panel ni usar una aplicación para que
 el dispositivo funcione.
+
+## Comandos
+
+```bash
+npm install
+npm run dev
+npm run build
+```
