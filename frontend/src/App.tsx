@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   PanelLeftClose,
   Plus,
+  Rotate3d,
   Settings,
   ShieldCheck,
   Smartphone,
@@ -250,6 +251,50 @@ function App() {
               <button className="add-person-button"><Plus size={16} /> Añadir una persona</button>
             </section>
           </div>
+
+          <section className="panel fall-panel">
+            <div className="panel-header">
+              <div>
+                <p className="panel-kicker">Seguridad del dispositivo</p>
+                <h2>Detección de caídas</h2>
+              </div>
+              <div className="sensor-status"><span /> Sensor activo</div>
+            </div>
+            <div className="fall-content">
+              <div className="fall-status-card">
+                <div className="fall-sensor-orbit">
+                  <div className="fall-sensor-core"><Rotate3d size={25} /></div>
+                  <i className="orbit-dot orbit-dot--one" />
+                  <i className="orbit-dot orbit-dot--two" />
+                </div>
+                <div className="fall-status-copy">
+                  <span>Estado actual</span>
+                  <strong>Sin eventos detectados</strong>
+                  <small>El giroscopio y acelerómetro están monitoreando el movimiento.</small>
+                </div>
+              </div>
+              <div className="fall-metric">
+                <span>Último movimiento</span>
+                <strong>Hace 3 min</strong>
+                <small>María González · proto-01</small>
+              </div>
+              <div className="fall-metric">
+                <span>Eventos este mes</span>
+                <strong>0</strong>
+                <small className="metric-ok"><ShieldCheck size={12} /> Todo en orden</small>
+              </div>
+              <div className="fall-activity">
+                <div className="fall-activity-head"><span>Actividad del sensor</span><small>Últimas 6 h</small></div>
+                <div className="motion-bars" aria-label="Actividad del giroscopio en las últimas seis horas">
+                  {[32, 46, 26, 60, 42, 75, 38, 51, 30, 67, 45, 54, 28, 62, 39, 70, 47, 58].map((height, index) => (
+                    <i key={index} style={{ height: `${height}%` }} />
+                  ))}
+                </div>
+                <div className="motion-times"><span>6:00</span><span>Ahora</span></div>
+              </div>
+            </div>
+            <div className="fall-note"><AlertTriangle size={13} /> Ante una posible caída, el dispositivo activa una pre-alerta de 15 segundos antes de avisar a los contactos.</div>
+          </section>
 
           <div className="bottom-grid">
             <section className="panel activity-panel">

@@ -8,6 +8,7 @@ Panel web para familiares, cuidadores y personal de la central de control.
 
 - Resumen de dispositivos y estado de conexión.
 - Historial de pulso y SpO2 como señales de seguimiento.
+- Estado del giroscopio y detección de caídas con pre-alerta.
 - Alertas activas e historial de eventos.
 - Contactos de emergencia.
 - Configuración de umbrales y horarios de inactividad.
