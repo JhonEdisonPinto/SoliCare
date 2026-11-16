@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Builds and coverage
+dist/
+build/
+coverage/
+.next/
+out/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local tooling
+.vscode/*
+!.vscode/extensions.json
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
