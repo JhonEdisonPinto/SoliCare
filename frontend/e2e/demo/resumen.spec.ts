@@ -13,12 +13,12 @@ test('the greeting, date and statistics come from real data', async ({ page }) =
   await expect(stats.locator('.stat-card', { hasText: 'Tiempo de respuesta' }).locator('.stat-value')).toHaveText('Sin datos');
 });
 
-test('the banner shows the most urgent alert with who to call, and can be closed for the visit', async ({ page }) => {
+test('the banner shows the most urgent alert without call links, and can be closed for the visit', async ({ page }) => {
   await page.goto('/');
   const banner = page.getByRole('region', { name: 'Caída sin atender' });
   await expect(banner).toBeVisible();
   await expect(banner).toContainText('Rosa Elena Pérez');
-  await expect(banner.getByRole('link', { name: /Andrés Pérez/ })).toBeVisible();
+  await expect(banner.getByRole('link', { name: /Andrés Pérez/ })).toHaveCount(0);
   await expect(banner.getByRole('link', { name: '1 alerta abierta más' })).toBeVisible();
   await banner.getByRole('button', { name: 'Cerrar aviso' }).click();
   // The next open alert (a silent device) takes its place.
