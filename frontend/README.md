@@ -79,7 +79,7 @@ oculta) y `src/lib/` (funciones puras de tiempo, estado, lecturas y gráficos).
 
 Con `VITE_DEMO_MODE=true` el panel usa datos simulados y deterministas, con la
 misma forma que los de la API, en lugar del servidor. La interfaz lo indica con
-la marca "Demostración" en la barra superior. Incluye personas, contactos,
+la marca "Modo demostración" en la barra superior. Incluye personas, contactos,
 una caída reciente, un dispositivo sin reporte y uno que nunca ha reportado.
 Sin esa variable, la aplicación nunca muestra datos inventados.
 
@@ -124,9 +124,9 @@ Para probar sin backend: `VITE_DEMO_MODE=true npm run dev`.
 
 `npm run test:e2e` ejecuta Playwright (solo Chromium). Tiene tres proyectos:
 
-- `unit`: funciones puras (`deriveAlerts`, `timeAgo`, `deviceStatus`, `validVital`) como pruebas de Node, sin navegador (`e2e/unit/`).
-- `demo`: recorre el panel en modo demostración (`e2e/demo/`): todas las rutas a 1280 px y 375 px sin desplazamiento horizontal ni errores de consola, alta, edición y borrado de personas y contactos, atender una alerta con nota, cambiar un ajuste, recarga de enlaces profundos, teclado y foco, `prefers-reduced-motion` y `axe-core` en cada ruta.
-- `unreachable`: el panel sin modo demostración y sin servidor, para comprobar el estado explícito de "no se pudo conectar" (`e2e/unreachable/`).
+- `unit`: funciones puras y el almacén local (`deriveAlerts`, `alertReferenceTime`, `parseCareData`, `assignDevice`, `timeAgo`, `deviceStatus`, `validVital`) como pruebas de Node, sin navegador (`e2e/unit/`).
+- `demo`: recorre el panel en modo demostración (`e2e/demo/`): todas las rutas a 1280 px, 375 px y 360 px sin desplazamiento horizontal ni errores de consola, alta, edición y borrado de personas y contactos, atender una alerta con nota, cambiar un ajuste, recarga de enlaces profundos, teclado y foco, `prefers-reduced-motion` y `axe-core` en cada ruta.
+- `unreachable`: el panel sin modo demostración y sin servidor, para comprobar el estado explícito de "no se pudo conectar" y que la consulta periódica se detiene con la pestaña oculta (`e2e/unreachable/`, el único proyecto cuyos datos viajan por HTTP y se pueden contar).
 
 La configuración (`playwright.config.ts`) levanta sola dos servidores de Vite, en los puertos 5199 (demostración) y 5198 (sin servidor), y reutiliza uno que ya esté corriendo salvo en CI (`CI=true`).
 

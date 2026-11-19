@@ -31,6 +31,7 @@ export function Alertas() {
     for (const alert of alerts) byState[alert.state] += 1;
     return byState;
   }, [alerts]);
+  const pendingFall = useMemo(() => alerts.some((alert) => alert.kind === 'caida' && alert.state === 'pendiente'), [alerts]);
 
   const filtered = useMemo(() => alerts.filter((alert) => (!state || alert.state === state) && (!kind || alert.kind === kind)), [alerts, state, kind]);
   const visible = filtered.slice(0, shown);
@@ -54,7 +55,7 @@ export function Alertas() {
     <>
       <PageHeader title="Alertas">
         <ul className="tally" aria-label="Conteo de alertas">
-          <li className={`tally-item${counts.pendiente === 0 ? ' tally-item--zero' : ' tally-item--caida'}`}>
+          <li className={`tally-item${counts.pendiente === 0 ? ' tally-item--zero' : pendingFall ? ' tally-item--caida' : ' tally-item--sin-reporte'}`}>
             <span className="tally-count">{counts.pendiente}</span> {counts.pendiente === 1 ? 'pendiente' : 'pendientes'}
           </li>
           <li className={`tally-item${counts.atendida === 0 ? ' tally-item--zero' : ''}`}>

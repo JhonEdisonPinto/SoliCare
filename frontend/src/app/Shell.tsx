@@ -58,7 +58,7 @@ function FallAnnouncer() {
     const fresh = falls.filter((alert) => !known.current!.has(alert.id));
     fresh.forEach((alert) => known.current!.add(alert.id));
     if (fresh.length > 0) {
-      const names = fresh.map((alert) => people.find((person) => person.deviceId === alert.deviceId)?.name ?? `dispositivo ${alert.deviceId}`);
+      const names = fresh.map((alert) => people.find((person) => person.id === alert.personId)?.name ?? `dispositivo ${alert.deviceId}`);
       setMessage(`Nueva caída detectada: ${names.join(', ')}.`);
     }
   }, [open, people, status]);

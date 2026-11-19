@@ -20,6 +20,29 @@ export type AlertDerivation = {
   newJournalEntries: AlertJournalEntry[];
 };
 
+/** Extra age, beyond one poll interval, before data counts as stale (covers request time and timer jitter). */
+export const STALE_MARGIN_MS = 30_000;
+
+/**
+ * The time alerts are derived against. The live clock only while the data is fresh. When the tab is
+ * hidden (polling paused), the server is unreachable, or the last successful fetch is older than one poll
+ * interval plus a margin, the data describes the world as of that fetch, so that is the time to use:
+ * a pause on the viewer's side never makes a device look silent, and a device that really is silent is
+ * found on the first successful fetch afterwards.
+ */
+export function alertReferenceTime(input: {
+  now: number;
+  lastSuccessAt: number | null;
+  unreachable: boolean;
+  hidden: boolean;
+  pollIntervalMs: number;
+}): number {
+  const { now, lastSuccessAt, unreachable, hidden, pollIntervalMs } = input;
+  if (lastSuccessAt === null) return now;
+  const stale = hidden || unreachable || now - lastSuccessAt > pollIntervalMs + STALE_MARGIN_MS;
+  return stale ? Math.min(lastSuccessAt, now) : now;
+}
+
 export const fallAlertId = (deviceId: string, at: string) => `caida:${deviceId}:${at}`;
 export const connectionAlertId = (deviceId: string, lastSeenAt: string) => `conexion:${deviceId}:${lastSeenAt}`;
 
@@ -63,14 +86,21 @@ export function deriveAlerts(input: AlertInputs): AlertDerivation {
     for (const reading of readings) {
       if (reading.type !== 'caida') continue;
       const id = fallAlertId(deviceId, reading.received_at);
-      observed.set(id, { id, kind: 'caida', deviceId, at: reading.received_at, detectedAt });
+      observed.set(id, { id, kind: 'caida', deviceId, at: reading.received_at, detectedAt, personId: personByDevice.get(deviceId) ?? null });
     }
   }
   for (const device of devices) {
     const seen = toMs(device.last_seen_at);
     if (seen === null || now - seen <= windowMs) continue;
     const id = connectionAlertId(device.device_id, device.last_seen_at);
-    observed.set(id, { id, kind: 'conexion', deviceId: device.device_id, at: device.last_seen_at, detectedAt });
+    observed.set(id, {
+      id,
+      kind: 'conexion',
+      deviceId: device.device_id,
+      at: device.last_seen_at,
+      detectedAt,
+      personId: personByDevice.get(device.device_id) ?? null,
+    });
   }
 
   const newJournalEntries = [...observed.values()].filter((entry) => !journal[entry.id]);
@@ -92,8 +122,9 @@ export function deriveAlerts(input: AlertInputs): AlertDerivation {
         resolvedByData = true;
         const firstBack = readingsByDevice[entry.deviceId]?.find((reading) => (toMs(reading.received_at) ?? 0) > entryMs);
         resolvedAt = ack?.resolvedAt ?? firstBack?.received_at ?? device?.last_seen_at;
-      } else if (!observed.has(entry.id) && !ack) {
-        // Same last report but no longer past the window (the window setting grew): not an alert.
+      } else if (!observed.has(entry.id) && !ack?.resolvedAt) {
+        // Same last report but no longer past the window (the window setting grew): not an alert any
+        // more, acknowledged or not. One the user resolved by hand stays in the history.
         continue;
       }
       overdueSince = new Date(entryMs + windowMs).toISOString();
@@ -104,7 +135,7 @@ export function deriveAlerts(input: AlertInputs): AlertDerivation {
       id: entry.id,
       kind: entry.kind,
       deviceId: entry.deviceId,
-      personId: personByDevice.get(entry.deviceId) ?? null,
+      personId: entry.personId !== undefined ? entry.personId : personByDevice.get(entry.deviceId) ?? null,
       at: entry.at,
       overdueSince,
       state,

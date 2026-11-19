@@ -39,4 +39,5 @@ export { expect };
 export const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
   mobile: { width: 375, height: 812 },
+  small: { width: 360, height: 740 },
 } as const;

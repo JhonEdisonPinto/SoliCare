@@ -4,10 +4,12 @@ import { AlertItem } from '../components/AlertItem';
 import { BlockHead } from '../components/BlockHead';
 import { SelectField } from '../components/Field';
 import { PageHeader } from '../components/PageHeader';
+import { Stamp } from '../components/Stamp';
 import { StatusMarkFor } from '../components/StatusMark';
 import { useToast } from '../components/Toast';
 import { VitalReadout } from '../components/VitalReadout';
 import { VitalsPanel } from '../components/VitalsPanel';
+import { fallAlertId } from '../data/alerts';
 import { useAlerts, useCare, useCareActions, useDeviceHistory, useDeviceSummaries, useNow, useReferenceNow, useTelemetry } from '../data/hooks';
 import type { Person, Reading } from '../data/types';
 import { formatFull, formatReadingTime, formatWhen, timeAgo } from '../lib/time';
@@ -23,9 +25,8 @@ function PersonAssignment({ deviceId, owner }: { deviceId: string; owner: Person
   const { formRef, errors, general, pending, onSubmit, onInput } = useForm(async (data) => {
     const chosen = text(data, 'personId') || null;
     if (chosen === (owner?.id ?? null)) return;
-    // Free the device first: the store refuses a device that another person still has.
-    if (owner) await actions.updatePerson(owner.id, { deviceId: null });
-    if (chosen) await actions.updatePerson(chosen, { deviceId });
+    // One store operation: the previous owner loses the device in the same write that gives it to the new one.
+    await actions.assignDevice(deviceId, chosen);
     toast({ text: 'Asignación guardada' });
   });
 
@@ -65,6 +66,24 @@ function PersonAssignment({ deviceId, owner }: { deviceId: string; owner: Person
         </button>
       </div>
     </form>
+  );
+}
+
+/** A fall in the loaded history that never became an alert (older than anything this browser watched). */
+function HistoryFall({ reading, now }: { reading: Reading; now: number }) {
+  return (
+    <li className="event event--caida event--resuelta">
+      <span className="event-stamp">
+        <Stamp kind="caida-atendida">Caída</Stamp>
+      </span>
+      <time className="event-time" dateTime={reading.received_at} title={formatFull(reading.received_at)}>
+        {formatWhen(reading.received_at, now)}
+      </time>
+      <span className="event-age">{timeAgo(reading.received_at, now)}</span>
+      <div className="event-detail">
+        <p>Lectura de caída anterior al registro de alertas de este navegador: no tiene estado de atención.</p>
+      </div>
+    </li>
   );
 }
 
@@ -117,6 +136,7 @@ export function DispositivoDetail() {
   const rows = useDeviceSummaries();
   const telemetry = useTelemetry();
   const { alerts } = useAlerts();
+  const { people } = useCare();
   const now = useReferenceNow();
   const clock = useNow();
   const [limit, setLimit] = useState(300);
@@ -143,6 +163,12 @@ export function DispositivoDetail() {
 
   const { device, person } = row;
   const falls = alerts.filter((alert) => alert.deviceId === deviceId && alert.kind === 'caida');
+  // The chart can show more readings than the alerts were derived from: list the falls it shows too.
+  const alertIds = new Set(falls.map((alert) => alert.id));
+  const olderFalls = history.readings
+    .filter((reading) => reading.type === 'caida' && !alertIds.has(fallAlertId(deviceId, reading.received_at)))
+    .reverse();
+  const fallCount = falls.length + olderFalls.length;
 
   return (
     <>
@@ -203,11 +229,14 @@ export function DispositivoDetail() {
       </section>
 
       <section className="block" aria-labelledby="caidas">
-        <BlockHead id="caidas" title="Caídas detectadas" count={falls.length} />
-        {falls.length > 0 ? (
+        <BlockHead id="caidas" title="Caídas detectadas" count={fallCount} />
+        {fallCount > 0 ? (
           <ul className="event-log">
             {falls.map((alert) => (
-              <AlertItem key={alert.id} alert={alert} person={person} now={clock} />
+              <AlertItem key={alert.id} alert={alert} person={alert.personId ? people.find((item) => item.id === alert.personId) : undefined} now={clock} />
+            ))}
+            {olderFalls.map((reading) => (
+              <HistoryFall key={reading.received_at} reading={reading} now={clock} />
             ))}
           </ul>
         ) : (

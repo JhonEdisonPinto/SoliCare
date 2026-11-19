@@ -78,7 +78,7 @@ export function Configuracion() {
             value={poll}
             onChange={(event) => setPoll(event.target.value)}
             error={errors.pollIntervalSeconds}
-            hint={`Cada cuántos segundos el panel pide datos nuevos al servidor mientras esta pestaña está visible. Con la pestaña oculta se detiene. Entre ${pollLimits.min} y ${pollLimits.max}.`}
+            hint={`Cada cuántos segundos el panel pide datos nuevos al servidor mientras esta pestaña está visible. Con la pestaña oculta se detiene. Entre ${pollLimits.min} y ${pollLimits.max}, y como máximo la mitad de los minutos sin reporte.`}
           />
           {general ? (
             <p className="form-error" role="alert">

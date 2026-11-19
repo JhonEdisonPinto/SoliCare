@@ -1,9 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { TelemetrySource } from './api';
 import { ApiError } from './api';
 import type { CareRepository } from './store';
 import type { Alert, CareData, Device, Reading } from './types';
-import { deriveAlerts, isOpen } from './alerts';
+import { alertReferenceTime, deriveAlerts, isOpen } from './alerts';
 import { summarizeDevices, summarizePeople, unassignedDevices, type DeviceSummary, type PersonSummary } from './summary';
 import { usePolling } from './polling';
 
@@ -31,6 +31,21 @@ const TelemetryContext = createContext<TelemetryState | null>(null);
 const RepositoryContext = createContext<CareRepository | null>(null);
 const AlertsContext = createContext<AlertsValue | null>(null);
 const NowContext = createContext<number>(Date.now());
+const ReferenceNowContext = createContext<number>(Date.now());
+
+const subscribeVisibility = (listener: () => void) => {
+  document.addEventListener('visibilitychange', listener);
+  return () => document.removeEventListener('visibilitychange', listener);
+};
+
+/** True while the tab is hidden, which is also when polling is paused. */
+function useDocumentHidden(): boolean {
+  return useSyncExternalStore(
+    subscribeVisibility,
+    () => document.hidden,
+    () => false,
+  );
+}
 
 function required<T>(value: T | null, name: string): T {
   if (value === null) throw new Error(`${name} must be used inside <DataProvider>`);
@@ -81,7 +96,16 @@ export function DataProvider({ source, repository, children }: { source: Telemet
 
   const telemetryValue = useMemo<TelemetryState>(() => ({ ...telemetry, source, refresh }), [telemetry, source, refresh]);
 
-  const referenceNow = telemetry.status === 'unreachable' && telemetry.lastSuccessAt !== null ? telemetry.lastSuccessAt : now;
+  // Alerts, statuses and "hace N min" ages are computed against this, not against the raw clock, so a
+  // paused or stale view never invents a connection alert (see alertReferenceTime).
+  const hidden = useDocumentHidden();
+  const referenceNow = alertReferenceTime({
+    now,
+    lastSuccessAt: telemetry.lastSuccessAt,
+    unreachable: telemetry.status === 'unreachable',
+    hidden,
+    pollIntervalMs: care.settings.pollIntervalSeconds * 1000,
+  });
 
   const derivation = useMemo(
     () =>
@@ -110,7 +134,9 @@ export function DataProvider({ source, repository, children }: { source: Telemet
     <RepositoryContext.Provider value={repository}>
       <TelemetryContext.Provider value={telemetryValue}>
         <NowContext.Provider value={now}>
-          <AlertsContext.Provider value={alertsValue}>{children}</AlertsContext.Provider>
+          <ReferenceNowContext.Provider value={referenceNow}>
+            <AlertsContext.Provider value={alertsValue}>{children}</AlertsContext.Provider>
+          </ReferenceNowContext.Provider>
         </NowContext.Provider>
       </TelemetryContext.Provider>
     </RepositoryContext.Provider>
@@ -139,13 +165,12 @@ export function useNow(): number {
 }
 
 /**
- * The time statuses are computed against: the clock while the server answers, the time of the last
- * successful update while it does not (so a viewer's network problem never looks like a silent device).
+ * The time statuses and alerts are computed against: the clock while the data is fresh, the time of the
+ * last successful update while it is not (tab hidden, server unreachable or an overdue poll), so a
+ * viewer-side pause never looks like a silent device.
  */
 export function useReferenceNow(): number {
-  const now = useNow();
-  const { status, lastSuccessAt } = useTelemetry();
-  return status === 'unreachable' && lastSuccessAt !== null ? lastSuccessAt : now;
+  return useContext(ReferenceNowContext);
 }
 
 /** Derived alerts: all, open ones, and the number nobody has acknowledged yet. */
@@ -206,8 +231,13 @@ export function useDeviceHistory(deviceId: string | null | undefined, limit: num
   );
 
   const refresh = usePolling(load, settings.pollIntervalSeconds * 1000);
+  // usePolling already runs once on mount (unless hidden). Run again only when the device or the limit
+  // changes afterwards, and not while the tab is hidden: becoming visible runs the latest task anyway.
+  const previousLoad = useRef(load);
   useEffect(() => {
-    refresh();
+    if (previousLoad.current === load) return;
+    previousLoad.current = load;
+    if (!document.hidden) refresh();
   }, [load, refresh]);
 
   return { ...state, refresh };

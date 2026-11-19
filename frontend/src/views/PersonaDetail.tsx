@@ -243,7 +243,8 @@ export function PersonaDetail() {
 
   const row = summary.people.find((item) => item.person.id === person.id);
   const known = telemetry.lastSuccessAt !== null;
-  const deviceAlerts = person.deviceId ? alerts.filter((alert) => alert.deviceId === person.deviceId) : [];
+  // History belongs to the person recorded when each alert was first seen, not to whoever has the device now.
+  const personAlerts = alerts.filter((alert) => alert.personId === person.id);
   const device = row?.device;
 
   const remove = async () => {
@@ -335,16 +336,16 @@ export function PersonaDetail() {
       <ContactsBlock person={person} />
 
       <section className="block" aria-labelledby="historial">
-        <BlockHead id="historial" title="Historial de alertas" count={person.deviceId ? deviceAlerts.length : undefined} />
-        {deviceAlerts.length > 0 ? (
+        <BlockHead id="historial" title="Historial de alertas" count={personAlerts.length} />
+        {personAlerts.length > 0 ? (
           <ul className="event-log">
-            {deviceAlerts.map((alert) => (
+            {personAlerts.map((alert) => (
               <AlertItem key={alert.id} alert={alert} person={person} now={clock} />
             ))}
           </ul>
         ) : (
           <p className="empty-row">
-            {person.deviceId ? 'No se han detectado caídas ni interrupciones en los reportes de su dispositivo.' : 'Sin dispositivo no hay alertas que mostrar.'}
+            {person.deviceId ? 'No se han detectado caídas ni interrupciones en los reportes de su dispositivo.' : 'Sin dispositivo ni alertas anteriores que mostrar.'}
           </p>
         )}
       </section>

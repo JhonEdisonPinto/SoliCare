@@ -62,6 +62,11 @@ export type AlertJournalEntry = {
   /** Fall: reading time. Connection: the last report before the gap. */
   at: string;
   detectedAt: string;
+  /**
+   * Who had the device when the condition was first observed (null: nobody). Absent only on entries
+   * saved before this field existed; those fall back to the device's current owner.
+   */
+  personId?: string | null;
 };
 
 export type CareData = {

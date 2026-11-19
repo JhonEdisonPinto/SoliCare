@@ -89,3 +89,49 @@ test('contacts: add with an inline error, edit, and delete keeps focus in the bl
   await expect(block.locator('.contact-name', { hasText: 'Sara' })).toHaveCount(0);
   await expect(block.getByRole('button', { name: 'Agregar contacto' })).toBeFocused();
 });
+
+test('saving "Editar datos" does not undo a device change made in the Dispositivo block (D3)', async ({ page }) => {
+  await page.goto('/personas/demo-p4');
+  await page.getByRole('button', { name: 'Editar datos' }).click();
+  const edit = page.getByRole('region', { name: 'Editar datos' });
+  await expect(edit.getByLabel('Dispositivo (opcional)')).toHaveValue('demo-04');
+
+  // Remove the device in the other block while the edit form is still open.
+  const block = page.getByRole('region', { name: 'Dispositivo', exact: true });
+  await block.getByLabel('Dispositivo asignado').selectOption('');
+  await block.getByRole('button', { name: 'Guardar dispositivo' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Dispositivo guardado' })).toBeVisible();
+  await expect(edit.getByLabel('Dispositivo (opcional)')).toHaveValue('');
+
+  await edit.getByLabel('Nombre').fill('Jorge Iván R.');
+  await edit.getByRole('button', { name: 'Guardar persona' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Jorge Iván R.' })).toBeVisible();
+  await expect(page.getByText('no tiene un dispositivo asignado')).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('no tiene un dispositivo asignado')).toBeVisible();
+});
+
+test('reassigning a device from its page moves it in one step and keeps past alerts with the person who had it (D2, D4)', async ({ page }) => {
+  // Let the panel see Rosa's fall once, so it is journaled with her as the person.
+  await page.goto('/personas');
+  await expect
+    .poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('solicare.demo.care.v1') ?? '{"journal":{}}').journal).length))
+    .toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Agregar persona' }).click();
+  await page.getByRole('region', { name: 'Agregar persona' }).getByLabel('Nombre').fill('Nueva Persona');
+  await page.getByRole('region', { name: 'Agregar persona' }).getByRole('button', { name: 'Guardar persona' }).click();
+  await expect(page.getByRole('link', { name: 'Nueva Persona' })).toBeVisible();
+
+  // demo-02 belongs to Rosa and has a pending fall.
+  await page.goto('/dispositivos/demo-02');
+  await expect(page.getByLabel('Persona asignada').locator('option', { hasText: 'Nueva Persona' })).toHaveCount(1);
+  await page.getByLabel('Persona asignada').selectOption({ label: 'Nueva Persona' });
+  await page.getByRole('button', { name: 'Guardar asignación' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Asignación guardada' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Nueva Persona' }).first()).toBeVisible();
+
+  await page.goto('/personas/demo-p1');
+  await expect(page.getByText('no tiene un dispositivo asignado')).toBeVisible();
+  // The fall happened while Rosa had the device: it stays in her history.
+  await expect(page.getByRole('region', { name: 'Historial de alertas' }).getByText('Caída').first()).toBeVisible();
+});

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { connectionAlertId, deriveAlerts, fallAlertId, type AlertInputs } from '../../src/data/alerts';
+import { alertReferenceTime, connectionAlertId, deriveAlerts, fallAlertId, type AlertInputs } from '../../src/data/alerts';
 import type { Device, Reading } from '../../src/data/types';
 import { DEFAULT_SETTINGS } from '../../src/data/types';
 
@@ -126,5 +126,112 @@ test.describe('deriveAlerts', () => {
       }),
     );
     expect(alerts[0].personId).toBe('p1');
+  });
+});
+
+test.describe('deriveAlerts boundaries', () => {
+  test('exactly the offline window is not overdue; one millisecond more is', () => {
+    const atWindow = { ...device('d1', 30) };
+    expect(deriveAlerts(inputs({ devices: [atWindow] })).alerts).toEqual([]);
+    const justOver = { ...device('d1', 30), last_seen_at: new Date(NOW - 30 * MIN - 1).toISOString() };
+    expect(deriveAlerts(inputs({ devices: [justOver] })).alerts).toHaveLength(1);
+  });
+});
+
+test.describe('alert attribution (D4)', () => {
+  const rosa = { id: 'p1', name: 'Rosa', relation: 'Mamá', deviceId: 'd1', contacts: [], createdAt: iso(-1000) };
+
+  test('a new journal entry records who had the device when the event was first observed', () => {
+    const { newJournalEntries } = deriveAlerts(inputs({ devices: [device('d1', 1)], readingsByDevice: { d1: [reading('caida', 6)] }, people: [rosa] }));
+    expect(newJournalEntries[0].personId).toBe('p1');
+    const unowned = deriveAlerts(inputs({ devices: [device('d1', 1)], readingsByDevice: { d1: [reading('caida', 6)] } }));
+    expect(unowned.newJournalEntries[0].personId).toBeNull();
+  });
+
+  test('history stays with the person recorded, even after the device moves to someone else', () => {
+    const fall = reading('caida', 600);
+    const id = fallAlertId('d1', fall.received_at);
+    const journal = { [id]: { id, kind: 'caida' as const, deviceId: 'd1', at: fall.received_at, detectedAt: iso(-599), personId: 'p1' } };
+    const luis = { ...rosa, id: 'p2', name: 'Luis' };
+    const { alerts } = deriveAlerts(inputs({ devices: [device('d1', 1)], journal, people: [{ ...rosa, deviceId: null }, luis] }));
+    expect(alerts[0].personId).toBe('p1');
+  });
+
+  test('entries from before the change (no person stored) fall back to the current owner', () => {
+    const fall = reading('caida', 600);
+    const id = fallAlertId('d1', fall.received_at);
+    const journal = { [id]: { id, kind: 'caida' as const, deviceId: 'd1', at: fall.received_at, detectedAt: iso(-599) } };
+    const { alerts } = deriveAlerts(inputs({ devices: [device('d1', 1)], journal, people: [rosa] }));
+    expect(alerts[0].personId).toBe('p1');
+  });
+});
+
+test.describe('connection alerts when the window grows (D7)', () => {
+  const lastSeen = iso(-40);
+  const id = connectionAlertId('d1', lastSeen);
+  const journal = { [id]: { id, kind: 'conexion' as const, deviceId: 'd1', at: lastSeen, detectedAt: iso(-5) } };
+  const wide = { ...DEFAULT_SETTINGS, offlineWindowMinutes: 60 };
+
+  test('an unacknowledged one disappears', () => {
+    expect(deriveAlerts(inputs({ devices: [device('d1', 40)], journal, settings: wide })).alerts).toEqual([]);
+  });
+
+  test('an acknowledged one no longer stays open either', () => {
+    const { alerts } = deriveAlerts(
+      inputs({ devices: [device('d1', 40)], journal, settings: wide, acknowledgements: { [id]: { acknowledgedAt: iso(-3) } } }),
+    );
+    expect(alerts.filter((alert) => alert.state !== 'resuelta')).toEqual([]);
+  });
+
+  test('one the user resolved stays in the history', () => {
+    const { alerts } = deriveAlerts(
+      inputs({ devices: [device('d1', 40)], journal, settings: wide, acknowledgements: { [id]: { acknowledgedAt: iso(-3), resolvedAt: iso(-2) } } }),
+    );
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({ state: 'resuelta', resolvedBy: 'usuario' });
+  });
+
+  test('it comes back if the window shrinks again', () => {
+    const { alerts } = deriveAlerts(inputs({ devices: [device('d1', 40)], journal, acknowledgements: { [id]: { acknowledgedAt: iso(-3) } } }));
+    expect(alerts[0]).toMatchObject({ state: 'atendida' });
+  });
+});
+
+test.describe('alertReferenceTime (D1)', () => {
+  const POLL = 15_000;
+  const lastSuccessAt = NOW;
+  const base = { lastSuccessAt, unreachable: false, hidden: false, pollIntervalMs: POLL };
+
+  test('uses the live clock while data is fresh', () => {
+    expect(alertReferenceTime({ ...base, now: NOW + 20_000 })).toBe(NOW + 20_000);
+  });
+
+  test('uses the last successful fetch while the tab is hidden, the server is unreachable or the data is stale', () => {
+    expect(alertReferenceTime({ ...base, now: NOW + 5_000, hidden: true })).toBe(NOW);
+    expect(alertReferenceTime({ ...base, now: NOW + 5_000, unreachable: true })).toBe(NOW);
+    expect(alertReferenceTime({ ...base, now: NOW + POLL + 31_000 })).toBe(NOW);
+  });
+
+  test('with a slow poll interval, data goes stale only after interval plus margin', () => {
+    const slow = { ...base, pollIntervalMs: 300_000 };
+    expect(alertReferenceTime({ ...slow, now: NOW + 329_000 })).toBe(NOW + 329_000);
+    expect(alertReferenceTime({ ...slow, now: NOW + 331_000 })).toBe(NOW);
+  });
+
+  test('without any successful fetch there is nothing older to use', () => {
+    expect(alertReferenceTime({ ...base, lastSuccessAt: null, now: NOW, hidden: true })).toBe(NOW);
+  });
+
+  test('a viewer-side pause never writes a connection alert, but a really silent device is found on the next success', () => {
+    const quiet = device('d1', 10); // reported 10 min before the last fetch
+    const hiddenForAnHour = alertReferenceTime({ ...base, now: NOW + 60 * MIN, hidden: true });
+    expect(deriveAlerts(inputs({ devices: [quiet], now: hiddenForAnHour })).newJournalEntries).toEqual([]);
+    // Tab visible again, before the next fetch answers: still stale.
+    const backButNotYetFetched = alertReferenceTime({ ...base, now: NOW + 60 * MIN });
+    expect(deriveAlerts(inputs({ devices: [quiet], now: backButNotYetFetched })).newJournalEntries).toEqual([]);
+    // The fetch answers: the device reported 10 min before the old fetch, so it is now 70 min silent.
+    const afterFetch = alertReferenceTime({ ...base, lastSuccessAt: NOW + 60 * MIN, now: NOW + 60 * MIN + 1_000 });
+    const found = deriveAlerts(inputs({ devices: [quiet], now: afterFetch }));
+    expect(found.alerts.map((alert) => alert.kind)).toEqual(['conexion']);
   });
 });

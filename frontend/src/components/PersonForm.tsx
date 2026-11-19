@@ -34,6 +34,9 @@ export function PersonForm({ person, onDone, onCancel }: { person?: Person; onDo
       <SelectField
         label="Dispositivo (opcional)"
         name="deviceId"
+        // Keyed by the stored device so the select always starts from current store state: a change made
+        // elsewhere on the page (or in another tab) is never undone by saving this form.
+        key={person?.deviceId ?? 'none'}
         defaultValue={person?.deviceId ?? ''}
         error={errors.deviceId}
         hint={

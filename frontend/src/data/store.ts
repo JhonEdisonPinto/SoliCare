@@ -16,6 +16,11 @@ export interface CareRepository {
   subscribe(listener: () => void): () => void;
   addPerson(input: PersonInput): Promise<Person>;
   updatePerson(id: string, input: Partial<PersonInput>): Promise<Person>;
+  /**
+   * Gives a device to a person (or to nobody with `null`) in one change: the previous owner loses it in
+   * the same write. Refuses a person that no longer exists or already has another device.
+   */
+  assignDevice(deviceId: string, personId: string | null): Promise<void>;
   removePerson(id: string): Promise<void>;
   addContact(personId: string, input: ContactInput): Promise<EmergencyContact>;
   updateContact(personId: string, contactId: string, input: Partial<ContactInput>): Promise<EmergencyContact>;
@@ -47,6 +52,13 @@ export const SETTINGS_LIMITS = {
 } as const;
 
 const JOURNAL_LIMIT = 1000;
+
+/**
+ * Polling faster than half the offline window keeps the data fresh enough that a gap between two
+ * fetches can never look like a silent device (the viewer sees data at most one interval plus a margin
+ * old, and devices report about every 30 s).
+ */
+export const maxPollSeconds = (offlineWindowMinutes: number) => Math.floor(offlineWindowMinutes * 30);
 
 export function emptyCareData(): CareData {
   return { version: 1, people: [], acknowledgements: {}, journal: {}, settings: { ...DEFAULT_SETTINGS } };
@@ -101,19 +113,49 @@ export function parseCareData(raw: unknown): CareData | null {
   if (isRecord(raw.journal)) {
     for (const [id, entry] of Object.entries(raw.journal)) {
       if (!isRecord(entry) || (entry.kind !== 'caida' && entry.kind !== 'conexion') || !isString(entry.deviceId) || !isString(entry.at)) continue;
-      journal[id] = { id, kind: entry.kind, deviceId: entry.deviceId, at: entry.at, detectedAt: isString(entry.detectedAt) ? entry.detectedAt : entry.at };
+      journal[id] = {
+        id,
+        kind: entry.kind,
+        deviceId: entry.deviceId,
+        at: entry.at,
+        detectedAt: isString(entry.detectedAt) ? entry.detectedAt : entry.at,
+        ...(isString(entry.personId) ? { personId: entry.personId } : entry.personId === null ? { personId: null } : {}),
+      };
     }
   }
+  const offlineWindowMinutes = clampInt(settings.offlineWindowMinutes, DEFAULT_SETTINGS.offlineWindowMinutes, SETTINGS_LIMITS.offlineWindowMinutes);
+  const pollIntervalSeconds = Math.min(
+    clampInt(settings.pollIntervalSeconds, DEFAULT_SETTINGS.pollIntervalSeconds, SETTINGS_LIMITS.pollIntervalSeconds),
+    maxPollSeconds(offlineWindowMinutes),
+  );
   return {
     version: 1,
-    people: Array.isArray(raw.people) ? raw.people.map(parsePerson).filter((p): p is Person => p !== null) : [],
+    people: parsePeople(raw.people),
     acknowledgements,
     journal,
-    settings: {
-      offlineWindowMinutes: clampInt(settings.offlineWindowMinutes, DEFAULT_SETTINGS.offlineWindowMinutes, SETTINGS_LIMITS.offlineWindowMinutes),
-      pollIntervalSeconds: clampInt(settings.pollIntervalSeconds, DEFAULT_SETTINGS.pollIntervalSeconds, SETTINGS_LIMITS.pollIntervalSeconds),
-    },
+    settings: { offlineWindowMinutes, pollIntervalSeconds },
   };
+}
+
+/** Keeps the first of any repeated person or contact id and the first person to claim each device. */
+function parsePeople(raw: unknown): Person[] {
+  if (!Array.isArray(raw)) return [];
+  const personIds = new Set<string>();
+  const deviceIds = new Set<string>();
+  const people: Person[] = [];
+  for (const value of raw) {
+    const person = parsePerson(value);
+    if (!person || personIds.has(person.id)) continue;
+    personIds.add(person.id);
+    const contactIds = new Set<string>();
+    person.contacts = person.contacts.filter((contact) => !contactIds.has(contact.id) && !!contactIds.add(contact.id));
+    if (person.deviceId) {
+      if (deviceIds.has(person.deviceId)) person.deviceId = null;
+      else deviceIds.add(person.deviceId);
+    }
+    people.push(person);
+  }
+  return people;
 }
 
 function requireText(value: string | undefined, field: string, message: string): string {
@@ -226,6 +268,23 @@ export function createLocalCareRepository(key: string, seed?: () => CareData): C
       return next;
     },
 
+    async assignDevice(deviceId, personId) {
+      const id = deviceId.trim();
+      if (!id) throw new StoreValidationError('deviceId', 'Falta el dispositivo.');
+      const owner = data.people.find((person) => person.deviceId === id);
+      if (owner?.id === personId) return;
+      let target: Person | undefined;
+      if (personId !== null) {
+        target = data.people.find((person) => person.id === personId);
+        if (!target) throw new StoreValidationError('personId', 'Esta persona ya no existe.');
+        if (target.deviceId) throw new StoreValidationError('personId', `${target.name} ya tiene el dispositivo ${target.deviceId}. Quítelo primero desde su detalle.`);
+      }
+      commit({
+        ...data,
+        people: data.people.map((person) => (person.id === owner?.id ? { ...person, deviceId: null } : person.id === personId ? { ...person, deviceId: id } : person)),
+      });
+    },
+
     async removePerson(id) {
       personIndex(id);
       commit({ ...data, people: data.people.filter((person) => person.id !== id) });
@@ -289,7 +348,11 @@ export function createLocalCareRepository(key: string, seed?: () => CareData): C
       if (fresh.length === 0) return;
       const journal = { ...data.journal };
       for (const entry of fresh) journal[entry.id] = entry;
-      commit({ ...data, journal: trimJournal(journal) });
+      const kept = trimJournal(journal);
+      // At the cap, a condition older than everything kept would be trimmed right away. Committing that
+      // changes nothing but would be derived as new again, so do not commit it.
+      if (!fresh.some((entry) => kept[entry.id])) return;
+      commit({ ...data, journal: kept });
     },
 
     async updateSettings(patch) {
@@ -300,6 +363,16 @@ export function createLocalCareRepository(key: string, seed?: () => CareData): C
         if (!Number.isInteger(value) || value < min || value > max) {
           throw new StoreValidationError(field, `Use un número entero entre ${min} y ${max}.`);
         }
+      }
+      if (next.pollIntervalSeconds > maxPollSeconds(next.offlineWindowMinutes)) {
+        const max = maxPollSeconds(next.offlineWindowMinutes);
+        const field = patch.pollIntervalSeconds !== undefined ? 'pollIntervalSeconds' : 'offlineWindowMinutes';
+        throw new StoreValidationError(
+          field,
+          field === 'pollIntervalSeconds'
+            ? `Con ${next.offlineWindowMinutes} minutos sin reporte, use como máximo ${max} segundos entre actualizaciones.`
+            : `Con ${next.pollIntervalSeconds} segundos entre actualizaciones, use al menos ${Math.ceil(next.pollIntervalSeconds / 30)} minutos sin reporte.`,
+        );
       }
       commit({ ...data, settings: next });
       return next;
