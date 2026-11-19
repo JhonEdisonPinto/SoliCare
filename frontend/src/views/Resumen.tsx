@@ -12,7 +12,7 @@ import type { Alert } from '../data/types';
 import { STRIP_WINDOW_MS } from '../lib/strip';
 import { formatFull, formatWhen, timeAgo } from '../lib/time';
 
-type TallyItem = { count: number; label: string; tone?: 'caida' | 'sin-reporte' };
+type TallyItem = { count: number; label: string };
 
 /** The counts in the status line. Every number is counted from data; the core counts show even at zero. */
 function tally(people: PersonSummary[], open: Alert[]): TallyItem[] {
@@ -32,10 +32,10 @@ function tally(people: PersonSummary[], open: Alert[]): TallyItem[] {
     else if (row.status === 'sin-dispositivo') noDevice += 1;
   }
   const items: TallyItem[] = [
-    { count: pendingFalls, label: pendingFalls === 1 ? 'caída sin atender' : 'caídas sin atender', tone: 'caida' },
+    { count: pendingFalls, label: pendingFalls === 1 ? 'caída sin atender' : 'caídas sin atender' },
   ];
   if (handledFalls) items.push({ count: handledFalls, label: handledFalls === 1 ? 'caída atendida' : 'caídas atendidas' });
-  items.push({ count: silent, label: 'sin reporte reciente', tone: 'sin-reporte' });
+  items.push({ count: silent, label: 'sin reporte reciente' });
   items.push({ count: never, label: 'sin datos todavía' });
   if (noDevice) items.push({ count: noDevice, label: 'sin dispositivo' });
   return items;
@@ -58,7 +58,7 @@ function StatusLine() {
         </li>
         {hasData && people > 0
           ? tally(summary.people, open).map((item) => (
-              <li key={item.label} className={`tally-item${item.count === 0 ? ' tally-item--zero' : item.tone ? ` tally-item--${item.tone}` : ''}`}>
+              <li key={item.label} className={`tally-item${item.count === 0 ? ' tally-item--zero' : ''}`}>
                 <span className="tally-count">{item.count}</span> {item.label}
               </li>
             ))
@@ -77,7 +77,7 @@ function StatusLine() {
             'Sin actualizar todavía'
           )}
         </p>
-        <button type="button" className="key key--small" onClick={telemetry.refresh}>
+        <button type="button" className="key key--text" onClick={telemetry.refresh}>
           Actualizar
         </button>
       </div>

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type StampKind = 'caida' | 'caida-atendida' | 'sin-reporte' | 'atendida' | 'sistema' | 'demo';
+export type StampKind = 'caida' | 'caida-atendida' | 'sin-reporte' | 'atendida' | 'sistema';
 
 /**
  * A boxed status code, as a monitoring centre prints it in its event log ("Caída", "Sin reporte").
