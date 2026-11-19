@@ -195,8 +195,6 @@ time,
     'tabs tabs';
   align-items: center;
   column-gap: var(--s-4);
-  max-inline-size: var(--content-max);
-  margin-inline: auto;
   padding-inline: var(--gutter);
 }
 
@@ -343,9 +341,9 @@ time,
   outline: none;
 }
 
+/* Anchored left under the brand, like an operations console; capped so row columns stay near each other. */
 .page {
   max-inline-size: var(--content-max);
-  margin-inline: auto;
 }
 
 /* Status line: view title, counts, freshness. */
@@ -542,6 +540,12 @@ time,
 .event-time {
   grid-area: time;
   font-weight: var(--weight-strong);
+}
+
+/* An event from another day stacks its date over the clock time, so the column keeps one width. */
+.event-day,
+.event-clock {
+  display: block;
   white-space: nowrap;
 }
 

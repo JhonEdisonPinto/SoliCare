@@ -37,6 +37,7 @@ export const test = base.extend<{ allowedConsoleErrors: RegExp | null; problems:
 export { expect };
 
 export const VIEWPORTS = {
+  wide: { width: 2560, height: 1080 },
   desktop: { width: 1280, height: 800 },
   mobile: { width: 375, height: 812 },
   small: { width: 360, height: 740 },

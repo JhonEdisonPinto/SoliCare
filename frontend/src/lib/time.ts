@@ -5,6 +5,7 @@ const DAY = 24 * HOUR;
 const relative = new Intl.RelativeTimeFormat('es-CO', { numeric: 'always', style: 'short' });
 const clock = new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit' });
 const dateClock = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const day = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' });
 const full = new Intl.DateTimeFormat('es-CO', { dateStyle: 'full', timeStyle: 'short' });
 
 export function toMs(iso: string | null | undefined): number | null {
@@ -44,6 +45,15 @@ export function formatWhen(iso: string, now: number): string {
   const today = new Date(now);
   const sameDay = date.toDateString() === today.toDateString();
   return sameDay ? clock.format(date) : dateClock.format(date);
+}
+
+/** formatWhen split for narrow columns: day is null for today ("2:32 p. m."), otherwise "17 nov" plus the clock time. */
+export function formatWhenParts(iso: string, now: number): { day: string | null; time: string } {
+  const ms = toMs(iso);
+  if (ms === null) return { day: null, time: '' };
+  const date = new Date(ms);
+  const sameDay = date.toDateString() === new Date(now).toDateString();
+  return { day: sameDay ? null : day.format(date), time: clock.format(date) };
 }
 
 /** Long form for tooltips and accessible names. */

@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { Alert, Person } from '../data/types';
 import { useCare, useCareActions } from '../data/hooks';
-import { formatFull, formatWhen, timeAgo } from '../lib/time';
+import { formatFull, formatWhen, formatWhenParts, timeAgo } from '../lib/time';
 import { Stamp, type StampKind } from './Stamp';
 import { useToast } from './Toast';
 
@@ -87,6 +87,7 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
   const contacts = isFall && !resolved && person ? person.contacts.filter((contact) => contact.phone).slice(0, 2) : [];
   const name = person ? person.name : `Dispositivo ${alert.deviceId}`;
   const subject = `${isFall ? 'caída' : 'sin reporte'} de ${name}`;
+  const when = formatWhenParts(alert.at, now);
 
   return (
     <li ref={item} tabIndex={-1} className={`event event--${alert.kind} event--${alert.state}`}>
@@ -94,7 +95,8 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
         <Stamp kind={stampKind}>{isFall ? 'Caída' : 'Sin reporte'}</Stamp>
       </span>
       <time className="event-time" dateTime={alert.at} title={formatFull(alert.at)}>
-        {formatWhen(alert.at, now)}
+        {when.day && <span className="event-day">{when.day}</span>}
+        <span className="event-clock">{when.time}</span>
       </time>
       <span className="event-subject">
         {person ? (

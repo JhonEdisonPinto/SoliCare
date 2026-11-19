@@ -45,7 +45,7 @@
   --s-6: 2rem;
   --s-7: 3rem;
   --gutter: 1rem;
-  --content-max: 80rem;
+  --content-max: 100rem;
 
   /* Geometry: square by default; stamps and keys get a 2 px corner so they read as objects, not boxes */
   --r-key: 2px;

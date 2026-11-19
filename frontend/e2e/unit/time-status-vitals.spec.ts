@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Device } from '../../src/data/types';
 import { deviceStatus } from '../../src/lib/status';
-import { timeAgo } from '../../src/lib/time';
+import { formatWhenParts, timeAgo } from '../../src/lib/time';
 import { latestValid, validRange, validVital } from '../../src/lib/vitals';
 
 const MIN = 60_000;
@@ -72,5 +72,24 @@ test.describe('validVital', () => {
     expect(latestValid(readings, 'spo2')).toEqual({ value: 96, at: at(3) });
     expect(validRange(readings, 'pulso')).toEqual({ min: 70, max: 80, count: 2 });
     expect(validRange([readings[2]], 'pulso')).toBeNull();
+  });
+});
+
+test.describe('formatWhenParts', () => {
+  test('today has no day part, so the event time column stays one line', () => {
+    const parts = formatWhenParts(at(1), NOW);
+    expect(parts.day).toBeNull();
+    expect(parts.time).not.toBe('');
+  });
+
+  test('another day splits the date from the clock time', () => {
+    const parts = formatWhenParts(at(2 * 24 * 60), NOW);
+    expect(parts.day).toMatch(/nov/);
+    expect(parts.time).not.toMatch(/nov/);
+    expect(parts.time).not.toBe('');
+  });
+
+  test('an invalid date gives empty parts', () => {
+    expect(formatWhenParts('not a date', NOW)).toEqual({ day: null, time: '' });
   });
 });
