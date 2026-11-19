@@ -182,7 +182,7 @@ export function Configuracion() {
           <div className="fact">
             <dt>Personas, contactos y alertas</dt>
             <dd>
-              {server ? 'Se guardan en el servidor de SoliCare y los ven todos los paneles con la clave' : 'Se guardan solo en este navegador'}: {care.people.length} {care.people.length === 1 ? 'persona' : 'personas'}, {contacts}{' '}
+              {server ? (hasKey ? 'Se guardan en el servidor de SoliCare y los ven todos los paneles con la clave' : 'Se guardan en el servidor de SoliCare y los ve cualquiera con el enlace del panel') : 'Se guardan solo en este navegador'}: {care.people.length} {care.people.length === 1 ? 'persona' : 'personas'}, {contacts}{' '}
               {contacts === 1 ? 'contacto' : 'contactos'}, {alerts.length} {alerts.length === 1 ? 'alerta registrada' : 'alertas registradas'} y {notes}{' '}
               {notes === 1 ? 'nota' : 'notas'}.{server ? '' : ' Otro navegador u otro equipo no los ve.'}
             </dd>
@@ -196,7 +196,7 @@ export function Configuracion() {
           <p className="settings-text">
             {hasKey
               ? 'Este navegador recuerda la clave del panel y la envía al servidor en cada petición. Cualquiera que la tenga puede ver y editar estos datos.'
-              : 'Este servidor no pidió una clave del panel.'}
+              : 'Este servidor no pide clave: cualquiera con el enlace del panel puede ver y editar estos datos.'}
           </p>
           {hasKey ? (
             changingKey ? (

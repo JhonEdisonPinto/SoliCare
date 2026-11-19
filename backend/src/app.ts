@@ -26,7 +26,7 @@ await registerStatsRoutes(app);
 if (careStore) {
   await registerCareRoutes(app, {
     store: careStore,
-    isAuthorized: createPanelAuth({ panelToken: env.panelToken, deviceIngestToken: env.deviceIngestToken, nodeEnv: env.nodeEnv }),
+    isAuthorized: createPanelAuth({ panelToken: env.panelToken }),
   });
 }
 await initializeDatabase();

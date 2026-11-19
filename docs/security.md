@@ -7,11 +7,13 @@ no protege y qué conviene hacer, en orden. No es asesoría legal.
 
 - Los datos de cuidado (personas, dispositivo asignado, contactos de emergencia,
   alertas atendidas, registro de alertas y ajustes) viven en el backend, en la
-  tabla `care_data`, y solo se leen o escriben con la **clave del panel**
-  (`Authorization: Bearer <clave>` en `GET` y `PUT /api/v1/care`).
-- La clave es `PANEL_TOKEN`. Mientras `PANEL_TOKEN` no exista, el backend acepta
-  `DEVICE_INGEST_TOKEN` en su lugar. Si no hay ninguno de los dos, en producción
-  la ruta rechaza todo y en desarrollo deja pasar.
+  tabla `care_data`. Cuando hay `PANEL_TOKEN`, solo se leen o escriben con la
+  **clave del panel** (`Authorization: Bearer <clave>` en `GET` y `PUT /api/v1/care`).
+- **Por ahora el panel está abierto**: mientras `PANEL_TOKEN` no exista o esté
+  vacío, cualquiera con el enlace del panel (o la URL del backend) lee y edita
+  estos datos, sin clave. Poner `PANEL_TOKEN` vuelve a exigir la clave. El token
+  del dispositivo (`DEVICE_INGEST_TOKEN`) ya no abre el panel; solo protege el
+  envío de lecturas.
 - El backend valida el documento y limita su tamaño: cuerpo de hasta 1 MiB, 100
   personas, 10 contactos por persona, 1000 eventos en el registro y 2000 alertas
   atendidas. Las escrituras llevan la versión en la que se basan; si otro panel

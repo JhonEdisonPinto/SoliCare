@@ -39,7 +39,7 @@ describe('care routes', () => {
     store = memoryStore();
     app = Fastify();
     await app.register(cors, corsOptions('https://panel.example'));
-    await registerCareRoutes(app, { store, isAuthorized: createPanelAuth({ panelToken: 'panel-key', nodeEnv: 'production' }) });
+    await registerCareRoutes(app, { store, isAuthorized: createPanelAuth({ panelToken: 'panel-key' }) });
   });
   afterEach(() => app.close());
 
@@ -133,19 +133,12 @@ describe('care routes', () => {
   });
 });
 
-describe('care routes without any token configured', () => {
-  async function build(nodeEnv: string) {
+describe('care routes without a panel key configured', () => {
+  test('are open in every environment, so anyone with the panel link can use them', async () => {
     const app = Fastify();
-    await registerCareRoutes(app, { store: memoryStore(), isAuthorized: createPanelAuth({ nodeEnv }) });
-    return app;
-  }
-
-  test('development lets the request through, production refuses it', async () => {
-    const dev = await build('development');
-    assert.equal((await dev.inject({ method: 'GET', url: '/api/v1/care' })).statusCode, 200);
-    await dev.close();
-    const production = await build('production');
-    assert.equal((await production.inject({ method: 'GET', url: '/api/v1/care' })).statusCode, 401);
-    await production.close();
+    await registerCareRoutes(app, { store: memoryStore(), isAuthorized: createPanelAuth({}) });
+    assert.equal((await app.inject({ method: 'GET', url: '/api/v1/care' })).statusCode, 200);
+    assert.equal((await app.inject({ method: 'PUT', url: '/api/v1/care', payload: { baseVersion: 0, data: emptyCareData() } })).statusCode, 200);
+    await app.close();
   });
 });
