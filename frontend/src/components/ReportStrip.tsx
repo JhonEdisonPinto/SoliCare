@@ -41,7 +41,7 @@ export const ReportStrip = memo(function ReportStrip({ readings, now, limit }: {
   const strip = buildReportStrip(readings, now, limit);
   const count = strip.bins.length;
   return (
-    <div className="strip">
+    <div className={strip.reports > 0 ? 'strip' : 'strip strip--empty'}>
       {strip.reports > 0 ? (
         <div className="strip-bar" aria-hidden="true">
           {runsOf(strip.bins).map((run) => (
