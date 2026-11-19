@@ -38,18 +38,13 @@ p {
   margin: 0;
 }
 
-/* Links keep an underline (WCAG 1.4.1) but rest it at a light tint so lists of names do not stripe. */
 a {
   color: var(--noche);
-  text-decoration-line: underline;
   text-decoration-thickness: 1px;
-  text-decoration-color: var(--link-line);
-  text-underline-offset: 0.25em;
+  text-underline-offset: 0.18em;
 }
 
-a:hover,
-a:focus-visible {
-  text-decoration-color: currentColor;
+a:hover {
   text-decoration-thickness: 2px;
 }
 
@@ -87,7 +82,7 @@ time,
   z-index: 30;
   padding: var(--s-2) var(--s-4);
   background: var(--paper);
-  border: 1px solid var(--edge);
+  border: 2px solid var(--ink);
   translate: 0 -200%;
 }
 
@@ -102,55 +97,42 @@ time,
   justify-content: center;
   min-block-size: var(--target);
   padding: var(--s-2) var(--s-4);
-  border: 1px solid var(--edge);
+  border: 2px solid var(--ink);
   border-radius: var(--r-key);
   background: var(--paper);
   color: var(--ink);
   font: inherit;
-  font-weight: var(--weight-label);
+  font-weight: var(--weight-strong);
   line-height: 1.2;
   text-align: center;
   cursor: pointer;
 }
 
 .key:hover {
-  border-color: var(--ink);
-  background: var(--chrome);
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .key:active {
   translate: 0 1px;
 }
 
-/* A text action ("Actualizar"): no box, link-like underline, still a 44 px target. */
-.key--text {
-  padding-inline: var(--s-2);
-  border-color: transparent;
-  background: none;
-  color: var(--noche);
+.key--small {
+  min-block-size: 2.25rem;
+  padding: var(--s-1) var(--s-3);
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  text-decoration: underline 1px var(--link-line);
-  text-underline-offset: 0.25em;
-}
-
-.key--text:hover {
-  border-color: transparent;
-  background: none;
-  text-decoration-color: currentColor;
-  text-decoration-thickness: 2px;
 }
 
 /* ---------- Stamps ---------- */
 .stamp {
   display: inline-flex;
   align-items: center;
-  min-block-size: 1.625rem;
+  min-block-size: 1.75rem;
   padding: 0 var(--s-2);
-  border: 1px solid;
+  border: 2px solid;
   border-radius: var(--r-key);
   font-size: var(--text-sm);
-  font-weight: var(--weight-label);
+  font-weight: var(--weight-strong);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -159,7 +141,6 @@ time,
   background: var(--caida);
   border-color: var(--caida);
   color: #fff;
-  font-weight: var(--weight-strong);
 }
 
 .stamp--caida-atendida {
@@ -186,10 +167,17 @@ time,
   color: #fff;
 }
 
+.stamp--demo {
+  background: var(--paper);
+  border-color: var(--ink);
+  border-style: dashed;
+  color: var(--ink);
+}
+
 /* ---------- Console chrome ---------- */
 .console-bar {
   background: var(--chrome);
-  border-block-end: 1px solid var(--rule-strong);
+  border-block-end: 3px solid var(--rule-strong);
 }
 
 .console-bar-inner {
@@ -210,7 +198,7 @@ time,
   padding-block: var(--s-3);
   color: var(--ink);
   font-size: var(--text-md);
-  font-weight: var(--weight-strong);
+  font-weight: 800;
   text-decoration: none;
 }
 
@@ -219,7 +207,7 @@ time,
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--s-5);
+  gap: var(--s-3);
   min-inline-size: 0;
 }
 
@@ -227,13 +215,6 @@ time,
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-}
-
-.source-label {
-  color: var(--ink);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-label);
-  white-space: nowrap;
 }
 
 .source-note {
@@ -247,8 +228,10 @@ time,
 }
 
 .clock {
-  color: var(--ink-2);
+  padding-inline-start: var(--s-3);
+  border-inline-start: 1px solid var(--ink-3);
   font-size: var(--text-base);
+  font-weight: var(--weight-strong);
   white-space: nowrap;
 }
 
@@ -271,7 +254,7 @@ time,
   min-block-size: var(--target);
   padding: 0 var(--s-3);
   color: var(--ink-2);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-label);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -281,29 +264,33 @@ time,
   text-decoration: underline;
 }
 
-/* Current page: a white tab with an ink top edge and heavier ink text, not color alone. */
+/* Current page: a white tab with a heavy top edge and bold ink, not color alone. */
 .tab[aria-current='page'] {
   background: var(--paper);
-  box-shadow: inset 0 2px 0 var(--ink);
+  box-shadow: inset 0 3px 0 var(--ink);
   color: var(--ink);
-  font-weight: var(--weight-label);
+  font-weight: 800;
 }
 
 .tab-count {
-  min-inline-size: 1.25rem;
-  padding: 0 0.3rem;
+  min-inline-size: 1.5rem;
+  padding: 0 0.375rem;
   border-radius: var(--r-key);
   background: var(--ink);
   color: #fff;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-label);
-  line-height: 1.25rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
+  line-height: 1.5rem;
   text-align: center;
 }
 
 @media (min-width: 40rem) {
   .source .source-note {
     display: inline;
+  }
+
+  .clock {
+    font-size: var(--text-md);
   }
 }
 
@@ -332,8 +319,8 @@ time,
 
   /* On one row the current tab opens into the work surface below the rule. */
   .tab[aria-current='page'] {
-    margin-block-end: -1px;
-    border-block-end: 1px solid var(--paper);
+    margin-block-end: -3px;
+    border-block-end: 3px solid var(--paper);
   }
 }
 
@@ -357,13 +344,14 @@ time,
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--s-3) var(--s-6);
-  padding-block: var(--s-5) 0;
+  gap: var(--s-3) var(--s-5);
+  padding-block: var(--s-4) var(--s-3);
+  border-block-end: 1px solid var(--rule);
 }
 
 .view-title {
   font-size: var(--text-lg);
-  font-weight: var(--weight-strong);
+  font-weight: 800;
 }
 
 .tally {
@@ -377,18 +365,28 @@ time,
 }
 
 .tally-item {
-  color: var(--ink-2);
+  color: var(--ink);
 }
 
 .tally-count {
-  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: 800;
+}
+
+.tally-item--zero {
+  color: var(--ink-3);
+}
+
+.tally-item--zero .tally-count {
   font-weight: var(--weight-label);
 }
 
-.tally-item--zero,
-.tally-item--zero .tally-count {
-  color: var(--ink-3);
-  font-weight: var(--weight-body);
+.tally-item--caida .tally-count {
+  color: var(--caida);
+}
+
+.tally-item--sin-reporte .tally-count {
+  color: var(--sin-reporte-text);
 }
 
 .status-line-end {
@@ -398,7 +396,7 @@ time,
 }
 
 .updated {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -407,10 +405,12 @@ time,
     display: flex;
     flex: 0 1 auto;
     flex-wrap: wrap;
-    gap: var(--s-1) var(--s-6);
+    gap: var(--s-1) 0;
   }
 
   .tally-item {
+    padding-inline: var(--s-4);
+    border-inline-start: 1px solid var(--rule);
     white-space: nowrap;
   }
 
@@ -422,7 +422,7 @@ time,
 /* ---------- Blocks ---------- */
 .block {
   container-type: inline-size;
-  margin-block-start: var(--s-7);
+  margin-block-start: var(--s-6);
 }
 
 .block-head {
@@ -431,28 +431,32 @@ time,
   align-items: baseline;
   gap: var(--s-1) var(--s-4);
   padding-block-end: var(--s-2);
-  border-block-end: 1px solid var(--rule-strong);
+  border-block-end: 2px solid var(--rule-strong);
 }
 
 .block-title {
   font-size: var(--text-md);
-  font-weight: var(--weight-label);
+  font-weight: var(--weight-strong);
 }
 
-/* A plain muted figure after the title, not a box. */
 .block-count {
+  display: inline-block;
   margin-inline-start: var(--s-2);
-  color: var(--ink-3);
-  font-weight: var(--weight-body);
+  padding: 0 0.375rem;
+  border: 1px solid var(--ink-3);
+  border-radius: var(--r-key);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-label);
+  line-height: 1.5;
 }
 
 .block-note {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
 .empty-row {
-  padding: var(--s-4) 0;
+  padding: var(--s-3) 0;
   border-block-end: 1px solid var(--rule);
   color: var(--ink-2);
 }
@@ -462,19 +466,20 @@ time,
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--s-2) var(--s-4);
-  padding: var(--s-4) 0;
+  padding: var(--s-3) 0;
   border-block-end: 1px solid var(--rule);
   color: var(--ink-2);
 }
 
 .system-row--problem {
-  border-block-end-color: var(--rule-strong);
+  border-block-end: 2px solid var(--rule-strong);
+  color: var(--ink);
 }
 
 .system-title {
   color: var(--ink);
   font-size: var(--text-base);
-  font-weight: var(--weight-label);
+  font-weight: var(--weight-strong);
 }
 
 .system-body {
@@ -511,7 +516,7 @@ time,
     'action action action';
   align-items: baseline;
   gap: var(--s-1) var(--s-3);
-  padding: var(--s-4) var(--s-2);
+  padding: var(--s-3) var(--s-2);
   border-block-end: 1px solid var(--rule);
 }
 
@@ -526,6 +531,7 @@ time,
 
 .event-time {
   grid-area: time;
+  font-weight: var(--weight-strong);
   white-space: nowrap;
 }
 
@@ -540,13 +546,13 @@ time,
 .event-name {
   color: var(--ink);
   font-size: var(--text-md);
-  font-weight: var(--weight-label);
+  font-weight: var(--weight-strong);
 }
 
 .event-relation,
 .event-device,
 .event-age {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -572,7 +578,12 @@ time,
 .event-contacts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-1) var(--s-5);
+  gap: var(--s-1) var(--s-4);
+  color: var(--ink);
+}
+
+.event-contacts-label {
+  font-weight: var(--weight-label);
 }
 
 .contact-link {
@@ -580,6 +591,7 @@ time,
   align-items: center;
   min-block-size: 1.5rem;
   color: var(--noche);
+  font-weight: var(--weight-label);
 }
 
 .contact-phone {
@@ -603,7 +615,7 @@ time,
       'stamp time subject device age action'
       '. . detail detail detail action';
     column-gap: var(--s-4);
-    padding: var(--s-4) var(--s-3);
+    padding: var(--s-3);
   }
 
   .event-age {
@@ -621,7 +633,6 @@ time,
 }
 
 /* ---------- Data tables ---------- */
-/* Status: the glyph carries the colour, the word stays in ink, so state colour is never doubled. */
 .data-table {
   inline-size: 100%;
   border-collapse: collapse;
@@ -630,17 +641,18 @@ time,
 
 .data-table th,
 .data-table td {
-  padding: var(--s-4) var(--s-3);
+  padding: var(--s-3);
   border-block-end: 1px solid var(--rule);
   text-align: start;
   vertical-align: top;
 }
 
 .data-table thead th {
-  padding-block: var(--s-3) var(--s-2);
-  color: var(--ink-2);
+  padding-block: var(--s-2);
+  border-block-end: 1px solid var(--ink-3);
+  color: var(--ink);
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-strong);
   vertical-align: bottom;
 }
 
@@ -649,7 +661,7 @@ time,
 }
 
 .unit-head {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-weight: var(--weight-body);
 }
 
@@ -659,14 +671,14 @@ time,
 
 .person-name {
   color: var(--ink);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-strong);
 }
 
 .person-sub {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--s-3);
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -674,31 +686,37 @@ time,
   display: inline-flex;
   align-items: baseline;
   gap: var(--s-2);
-  color: var(--ink-2);
 }
 
 .status-glyph {
   flex: none;
-  inline-size: 0.6875rem;
-  block-size: 0.6875rem;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
   border: 2px solid currentColor;
   translate: 0 0.05em;
 }
 
+.status-text {
+  font-weight: var(--weight-label);
+}
+
 .status-detail {
   display: block;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-body);
+}
+
+.status--en-linea {
+  color: var(--en-linea);
 }
 
 .status--en-linea .status-glyph {
-  border-color: var(--en-linea);
-  background: var(--en-linea);
+  background: currentColor;
 }
 
-/* The one table state that needs action: ink text, heavy hollow amber square. */
 .status--sin-reporte {
-  color: var(--ink);
+  color: var(--sin-reporte-text);
 }
 
 .status--sin-reporte .status-glyph {
@@ -706,10 +724,14 @@ time,
   border-color: var(--sin-reporte-mark);
 }
 
+.status--nunca,
+.status--sin-dispositivo {
+  color: var(--sin-datos);
+}
+
 .status--nunca .status-glyph,
 .status--sin-dispositivo .status-glyph {
   border-style: dashed;
-  border-color: var(--sin-datos);
 }
 
 .status--desconocido {
@@ -725,7 +747,7 @@ time,
   margin-block-start: var(--s-1);
   color: var(--ink-2);
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-strong);
 }
 
 .row-flag--caida {
@@ -734,6 +756,7 @@ time,
 
 .vital-value {
   font-size: var(--text-md);
+  font-weight: var(--weight-strong);
 }
 
 .vital-unit {
@@ -781,8 +804,8 @@ time,
   font-weight: var(--weight-body);
 }
 
-.data-table .device-id {
-  font-weight: var(--weight-body);
+.device-id {
+  font-weight: var(--weight-label);
 }
 
 .cell-link {
@@ -823,7 +846,7 @@ time,
   }
 }
 
-/* Report bar: thin stretches of reports over a bare baseline. The bar box keeps its height for the fall mark. */
+/* Report bar: stretches of reports over a bare baseline. */
 .strip-bar {
   position: relative;
   block-size: 0.875rem;
@@ -834,31 +857,29 @@ time,
   content: '';
   position: absolute;
   inset-inline: 0;
-  inset-block-start: calc(50% - 0.5px);
-  border-block-start: 1px solid var(--edge);
+  inset-block-start: 50%;
+  border-block-start: 1px solid var(--baseline);
 }
 
 .strip-run {
   position: absolute;
-  inset-block-start: calc(50% - 0.1875rem);
-  block-size: 0.375rem;
-  border-radius: 1px;
+  inset-block: 0;
   background: var(--senal);
 }
 
 .strip-run--sin-cargar {
+  inset-block: auto;
   inset-block-start: calc(50% - 1px);
   block-size: 0;
-  border-radius: 0;
   background: none;
-  border-block-start: 2px dotted var(--edge);
+  border-block-start: 3px dotted var(--baseline);
 }
 
 .strip-fall {
   position: absolute;
-  inset-block: 0;
-  inline-size: 3px;
-  margin-inline-start: -1.5px;
+  inset-block: -0.3rem;
+  inline-size: 4px;
+  margin-inline-start: -2px;
   background: var(--caida);
   box-shadow: 0 0 0 2px var(--paper);
 }
@@ -870,7 +891,7 @@ time,
 .strip-summary {
   display: block;
   margin-block-start: var(--s-2);
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -890,7 +911,7 @@ time,
   }
 
   .data-table tr {
-    padding: var(--s-4) var(--s-2);
+    padding: var(--s-3) var(--s-2);
     border-block-end: 1px solid var(--rule);
   }
 
@@ -902,7 +923,7 @@ time,
 
   .data-table td[data-label]::before {
     content: attr(data-label) ' ';
-    color: var(--ink-3);
+    color: var(--ink-2);
     font-size: var(--text-sm);
     font-weight: var(--weight-body);
   }
@@ -961,7 +982,7 @@ time,
     height: auto;
     overflow: visible;
     clip-path: none;
-    color: var(--ink-3);
+    color: var(--ink-2);
     font-size: var(--text-sm);
   }
 
@@ -1007,10 +1028,10 @@ time,
 
 .footnote {
   max-inline-size: var(--measure);
-  margin-block-start: var(--s-7);
+  margin-block-start: var(--s-6);
   padding-block-start: var(--s-3);
   border-block-start: 1px solid var(--rule);
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -1042,12 +1063,12 @@ time,
 .toast-action {
   min-block-size: var(--target);
   padding: var(--s-2) var(--s-3);
-  border: 1px solid #fff;
+  border: 2px solid #fff;
   border-radius: var(--r-key);
   background: transparent;
   color: #fff;
   font: inherit;
-  font-weight: var(--weight-label);
+  font-weight: var(--weight-strong);
   cursor: pointer;
 }
 
@@ -1087,11 +1108,7 @@ time,
 /* ---------- Forced colors ---------- */
 @media (forced-colors: active) {
   .tab[aria-current='page'] {
-    border: 2px solid CanvasText;
-  }
-
-  .key--text {
-    border-color: transparent;
+    border: 3px solid CanvasText;
   }
 
   .stamp--caida,

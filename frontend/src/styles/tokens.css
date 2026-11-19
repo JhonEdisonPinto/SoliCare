@@ -1,41 +1,39 @@
-/* Design tokens. Direction and contrast figures: .workflow design-research section 7 ("central console", 7.15 refinement). Light theme only. */
+/* Design tokens. Direction and contrast figures: .workflow design-research section 7 ("central console"). Light theme only. */
 :root {
   color-scheme: light;
 
-  /* Planes and ink: three ink levels carry the hierarchy, together with size and weight */
+  /* Planes and ink */
   --paper: #ffffff; /* the work surface: one plane, no cards */
-  --chrome: #e8ecef; /* console chrome (tab bar): light steel; also the key hover fill */
-  --ink: #16242e; /* primary: titles, names, figures; 15.84:1 on paper, 13.33:1 on chrome */
-  --ink-2: #4a5963; /* secondary: body detail, column headers; 7.24:1 on paper, 6.09:1 on chrome */
-  --ink-3: #5a6870; /* muted: metadata, axis labels, zero counts; 5.76:1 on paper, 4.84:1 on chrome, 4.94:1 on the fall wash */
-  --rule: #e1e6e9; /* hairline between rows (decorative; spacing also separates rows) */
-  --rule-strong: #8a959c; /* the one stronger rule: under the chrome, block heads and the outage notice */
-  --edge: #7a868d; /* control boundaries (keys) and the bare report baseline; 3.74:1 on paper, 3.24:1 on the fall wash */
+  --chrome: #e8ecef; /* console chrome (tab bar): light steel */
+  --ink: #16242e; /* slate; 15.84:1 on paper, 13.33:1 on chrome */
+  --ink-2: #43535d; /* 7.97:1 on paper */
+  --ink-3: #5a6870; /* 5.76:1 on paper, 4.84:1 on chrome */
+  --rule: #cbd2d6; /* hairline between rows */
+  --rule-strong: var(--ink); /* 2 px rule under headers and the chrome */
   --noche: #233f66; /* links and focus ring; 9.13:1 on the fall wash */
-  --link-line: color-mix(in srgb, currentColor 38%, transparent); /* resting underline; full ink on hover and focus */
 
   /* Data ink: "the device reported" */
-  --senal: #6a8cae; /* thin report stretches; 3.51:1 on paper (graphical object) */
+  --senal: #2f5d8a; /* 6.88:1 on paper */
+  --baseline: #7a868d; /* empty stretch of a report bar, 3.74:1 */
 
-  /* Reserved status set: state only, always with text and a distinct shape, never doubled */
+  /* Reserved status set: state only, always with text and a distinct shape */
   --caida: #a3241a; /* white on it 7.43:1 */
   --caida-wash: #fbeae7; /* background of an open fall row; ink 13.59:1, caida text 6.38:1 */
-  --sin-reporte-mark: #b86e00; /* stamp border and status glyph, 3.99:1 (UI) */
-  --sin-reporte-text: #8a4b00; /* stamp text, 6.80:1 on paper */
-  --en-linea: #1d7a46; /* status glyph, 5.35:1 */
-  --sin-datos: #66727a; /* status glyph, 4.94:1 */
+  --sin-reporte-mark: #b86e00; /* stamp border, 3.99:1 (UI) */
+  --sin-reporte-text: #8a4b00; /* 6.80:1 on paper */
+  --en-linea: #1d7a46; /* 5.35:1 */
+  --sin-datos: #66727a; /* 4.94:1 */
 
   /* Type: one family, tabular figures wherever numbers sit in columns */
   --font: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible', system-ui, sans-serif;
-  --text-xs: 0.875rem; /* 14 px: axis labels */
-  --text-sm: 0.9375rem; /* 15 px: secondary cells, stamps, headers */
+  --text-sm: 0.9375rem; /* 15 px: secondary cells, stamps */
+  --text-xs: 0.875rem; /* 14 px: smallest (axis labels) */
   --text-base: 1.0625rem; /* 17 px body */
-  --text-md: 1.1875rem; /* 19 px: block titles, event names, vitals */
-  --text-lg: 1.625rem; /* 26 px: the view title */
+  --text-md: 1.25rem;
+  --text-lg: 1.5rem;
   --weight-body: 400;
-  --weight-medium: 500;
-  --weight-label: 600;
-  --weight-strong: 700; /* spent on the view title, the brand and the solid fall stamp only */
+  --weight-label: 650;
+  --weight-strong: 760;
   --measure: 66ch;
 
   /* Spacing (4 px base) */

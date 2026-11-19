@@ -10,7 +10,7 @@ function SourceStatus() {
   if (source.kind === 'demo') {
     return (
       <span className="source">
-        <span className="source-label">Demostración</span>
+        <Stamp kind="demo">Demostración</Stamp>
         <span className="source-note">
           <span className="visually-hidden">: personas, dispositivos y lecturas </span>
           <span aria-hidden="true">datos </span>simulados
