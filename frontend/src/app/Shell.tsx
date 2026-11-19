@@ -131,6 +131,9 @@ export function Shell() {
           <Outlet />
         </div>
       </main>
+      <footer className="shell-footer">
+        <p>Las señales de seguimiento no son un diagnóstico: no reemplazan una valoración médica ni la línea de emergencias.</p>
+      </footer>
       <FallAnnouncer />
       <ScrollRestoration />
     </div>

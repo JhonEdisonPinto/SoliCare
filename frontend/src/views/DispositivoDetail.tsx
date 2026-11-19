@@ -243,10 +243,6 @@ export function DispositivoDetail() {
           <p className="empty-row">Este dispositivo no ha registrado caídas.</p>
         )}
       </section>
-
-      <p className="footnote">
-        Las señales de seguimiento no son un diagnóstico: no reemplazan una valoración médica ni la línea de emergencias.
-      </p>
     </>
   );
 }

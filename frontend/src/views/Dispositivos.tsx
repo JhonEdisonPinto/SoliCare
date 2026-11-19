@@ -152,10 +152,6 @@ export function Dispositivos() {
           </div>
         )}
       </section>
-
-      <p className="footnote">
-        Las señales de seguimiento no son un diagnóstico: no reemplazan una valoración médica ni la línea de emergencias.
-      </p>
     </>
   );
 }
