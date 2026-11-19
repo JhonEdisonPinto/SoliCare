@@ -23,7 +23,27 @@ type DemoDevice = {
   falls: number[];
 };
 
-const sessionStart = Math.floor(Date.now() / SLOT_MS) * SLOT_MS;
+const START_KEY = 'solicare.demo.start';
+const START_MAX_AGE_MS = 2 * 60 * MIN;
+
+/**
+ * Anchor of the simulated timeline. It is kept in localStorage so a page reload does not move the demo
+ * fall to a new instant (which would add a new fall alert to the journal on every reload); it is renewed
+ * after two hours so the demo keeps a recent fall and a recent silent device.
+ */
+function loadSessionStart(): number {
+  const fresh = Math.floor(Date.now() / SLOT_MS) * SLOT_MS;
+  try {
+    const stored = Number(window.localStorage.getItem(START_KEY));
+    if (Number.isFinite(stored) && stored > 0 && stored <= fresh && fresh - stored < START_MAX_AGE_MS) return stored;
+    window.localStorage.setItem(START_KEY, String(fresh));
+  } catch {
+    // Storage blocked: the timeline starts now, as before.
+  }
+  return fresh;
+}
+
+const sessionStart = loadSessionStart();
 
 const DEVICES: DemoDevice[] = [
   { id: 'demo-01', phaseMs: 4_000, pulseBase: 72, spo2Base: 97, reporting: [{ from: -8 * 60 * MIN, to: Infinity }], falls: [] },

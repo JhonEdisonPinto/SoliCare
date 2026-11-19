@@ -1,3 +1,5 @@
+import { timeAgo } from '../lib/time';
+
 export type StatusKind = 'en-linea' | 'sin-reporte' | 'nunca' | 'sin-dispositivo' | 'desconocido';
 
 const LABEL: Record<StatusKind, string> = {
@@ -23,4 +25,25 @@ export function StatusMark({ kind, detail }: { kind: StatusKind; detail?: string
       </span>
     </span>
   );
+}
+
+/**
+ * The state of a device (or of the device a person uses) for a table cell. `known` is false until the
+ * server has answered once, so a person is not shown as silent only because nothing has loaded.
+ */
+export function StatusMarkFor({
+  status,
+  lastSeenAt,
+  known,
+  now,
+}: {
+  status: StatusKind;
+  lastSeenAt?: string;
+  known: boolean;
+  now: number;
+}) {
+  if (status === 'sin-dispositivo') return <StatusMark kind="sin-dispositivo" />;
+  if (!known) return <StatusMark kind="desconocido" />;
+  if (status === 'sin-reporte' && lastSeenAt) return <StatusMark kind="sin-reporte" detail={`último ${timeAgo(lastSeenAt, now)}`} />;
+  return <StatusMark kind={status} />;
 }

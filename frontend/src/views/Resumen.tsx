@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertItem } from '../components/AlertItem';
+import { BlockHead } from '../components/BlockHead';
 import { PageHeader } from '../components/PageHeader';
 import { ReportStrip } from '../components/ReportStrip';
 import { Stamp } from '../components/Stamp';
-import { StatusMark } from '../components/StatusMark';
+import { StatusMarkFor } from '../components/StatusMark';
+import { ReadingAge } from '../components/ReadingAge';
 import { VitalReadout } from '../components/VitalReadout';
 import { SUMMARY_READING_LIMIT, useAlerts, useCare, useNow, usePeopleSummary, useReferenceNow, useTelemetry } from '../data/hooks';
 import type { PersonSummary } from '../data/summary';
@@ -136,52 +137,10 @@ function ConnectionNotice() {
   return null;
 }
 
-function BlockHead({ id, title, count, children }: { id: string; title: string; count?: number; children?: ReactNode }) {
-  return (
-    <div className="block-head">
-      <h2 id={id} className="block-title">
-        {title}
-        {count !== undefined ? <span className="block-count">{count}</span> : null}
-      </h2>
-      {children ? <p className="block-note">{children}</p> : null}
-    </div>
-  );
-}
-
-/** Age of the latest valid vitals; both ages when pulse and SpO2 come from different readings. */
-function ReadingAge({ row, now }: { row: PersonSummary; now: number }) {
-  const { pulso, spo2 } = row;
-  if (!pulso && !spo2) return <span className="muted">Sin lecturas válidas</span>;
-  if (pulso && spo2 && pulso.at !== spo2.at) {
-    return (
-      <span className="reading-age">
-        <time dateTime={pulso.at} title={formatFull(pulso.at)}>
-          Pulso {timeAgo(pulso.at, now)}
-        </time>
-        <time dateTime={spo2.at} title={formatFull(spo2.at)}>
-          SpO2 {timeAgo(spo2.at, now)}
-        </time>
-      </span>
-    );
-  }
-  const at = (pulso ?? spo2)!.at;
-  return (
-    <time className="reading-age" dateTime={at} title={formatFull(at)}>
-      {timeAgo(at, now)}
-    </time>
-  );
-}
-
 function PersonRow({ row, now, known }: { row: PersonSummary; now: number; known: boolean }) {
   const { person, device, status } = row;
   const pendingFall = row.openAlerts.some((alert) => alert.kind === 'caida' && alert.state === 'pendiente');
   const handledFall = !pendingFall && row.openAlerts.some((alert) => alert.kind === 'caida');
-
-  let statusNode;
-  if (status === 'sin-dispositivo') statusNode = <StatusMark kind="sin-dispositivo" />;
-  else if (!known) statusNode = <StatusMark kind="desconocido" />;
-  else if (status === 'sin-reporte' && device) statusNode = <StatusMark kind="sin-reporte" detail={`último ${timeAgo(device.last_seen_at, now)}`} />;
-  else statusNode = <StatusMark kind={status} />;
 
   let rest;
   if (status === 'sin-dispositivo') {
@@ -213,7 +172,7 @@ function PersonRow({ row, now, known }: { row: PersonSummary; now: number; known
           <VitalReadout vital={row.spo2} kind="spo2" />
         </td>
         <td className="cell-age" data-label="Lectura">
-          <ReadingAge row={row} now={now} />
+          <ReadingAge pulso={row.pulso} spo2={row.spo2} now={now} />
         </td>
         <td className="cell-strip">
           <ReportStrip readings={row.readings} now={now} limit={SUMMARY_READING_LIMIT} />
@@ -239,7 +198,7 @@ function PersonRow({ row, now, known }: { row: PersonSummary; now: number; known
         </span>
       </th>
       <td className="cell-status">
-        {statusNode}
+        <StatusMarkFor status={status} lastSeenAt={device?.last_seen_at} known={known} now={now} />
         {pendingFall ? <span className="row-flag row-flag--caida">Caída sin atender</span> : null}
         {handledFall ? <span className="row-flag">Caída atendida</span> : null}
       </td>

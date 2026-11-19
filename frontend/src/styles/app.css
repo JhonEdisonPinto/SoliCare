@@ -117,6 +117,13 @@ time,
   translate: 0 1px;
 }
 
+.key:disabled {
+  border-color: var(--ink-3);
+  background: var(--paper);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
 .key--small {
   min-block-size: 2.25rem;
   padding: var(--s-1) var(--s-3);
@@ -513,6 +520,7 @@ time,
     'subject subject subject'
     'device device device'
     'detail detail detail'
+    'note note note'
     'action action action';
   align-items: baseline;
   gap: var(--s-1) var(--s-3);
@@ -613,7 +621,8 @@ time,
     grid-template-columns: 8.5rem 6.5rem minmax(0, 1fr) 6rem 7.5rem auto;
     grid-template-areas:
       'stamp time subject device age action'
-      '. . detail detail detail action';
+      '. . detail detail detail action'
+      '. . note note note note';
     column-gap: var(--s-4);
     padding: var(--s-3);
   }

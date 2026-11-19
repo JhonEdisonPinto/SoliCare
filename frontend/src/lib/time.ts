@@ -51,3 +51,21 @@ export function formatFull(iso: string): string {
   const ms = toMs(iso);
   return ms === null ? '' : full.format(new Date(ms));
 }
+
+const clockSeconds = new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+
+const dayClockSeconds = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', second: '2-digit' });
+
+/** Time of a reading with seconds: "2:32:05 p. m." today, "17 nov, 2:32:05 p. m." on another day. */
+export function formatReadingTime(iso: string, now: number): string {
+  const ms = toMs(iso);
+  if (ms === null) return '';
+  const sameDay = new Date(ms).toDateString() === new Date(now).toDateString();
+  return (sameDay ? clockSeconds : dayClockSeconds).format(new Date(ms));
+}
+
+/** Time of day with seconds ("2:32:05 p. m."), for readings that arrive every 30 s. */
+export function formatClockSeconds(iso: string): string {
+  const ms = toMs(iso);
+  return ms === null ? '' : clockSeconds.format(new Date(ms));
+}

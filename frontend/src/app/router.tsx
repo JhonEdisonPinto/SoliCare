@@ -1,7 +1,13 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { Shell } from './Shell';
+import { Alertas } from '../views/Alertas';
+import { Configuracion } from '../views/Configuracion';
+import { DispositivoDetail } from '../views/DispositivoDetail';
+import { Dispositivos } from '../views/Dispositivos';
+import { NotFound } from '../views/NotFound';
+import { PersonaDetail } from '../views/PersonaDetail';
+import { Personas } from '../views/Personas';
 import { Resumen } from '../views/Resumen';
-import { NotFound, Placeholder } from '../views/Placeholder';
 
 export const router = createBrowserRouter([
   {
@@ -9,12 +15,12 @@ export const router = createBrowserRouter([
     element: <Shell />,
     children: [
       { index: true, element: <Resumen /> },
-      { path: 'personas', element: <Placeholder title="Personas" /> },
-      { path: 'personas/:personId', element: <Placeholder title="Detalle de la persona" /> },
-      { path: 'dispositivos', element: <Placeholder title="Dispositivos" /> },
-      { path: 'dispositivos/:deviceId', element: <Placeholder title="Detalle del dispositivo" /> },
-      { path: 'alertas', element: <Placeholder title="Alertas" /> },
-      { path: 'configuracion', element: <Placeholder title="Configuración" /> },
+      { path: 'personas', element: <Personas /> },
+      { path: 'personas/:personId', element: <PersonaDetail /> },
+      { path: 'dispositivos', element: <Dispositivos /> },
+      { path: 'dispositivos/:deviceId', element: <DispositivoDetail /> },
+      { path: 'alertas', element: <Alertas /> },
+      { path: 'configuracion', element: <Configuracion /> },
       { path: '*', element: <NotFound /> },
     ],
   },

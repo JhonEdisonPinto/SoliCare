@@ -1,0 +1,591 @@
+/* Views built on the console system: forms, facts, the person and device tables, the vitals chart, the confirm dialog. */
+
+/* ---------- Forms: labelled native controls, one key style, errors in words under the field ---------- */
+.form {
+  display: grid;
+  gap: var(--s-4);
+  max-inline-size: 36rem;
+  padding-block: var(--s-4);
+}
+
+.field {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.field-label {
+  font-weight: var(--weight-label);
+}
+
+.field-hint {
+  max-inline-size: var(--measure);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.control {
+  inline-size: 100%;
+  min-block-size: var(--target);
+  padding: var(--s-2) var(--s-3);
+  border: 2px solid var(--ink);
+  border-radius: var(--r-key);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: max(1rem, 1em);
+  line-height: 1.3;
+}
+
+textarea.control {
+  min-block-size: 4.5rem;
+  resize: vertical;
+}
+
+.field--error .control {
+  border-color: var(--caida);
+  border-width: 3px;
+}
+
+.field-error,
+.form-error {
+  color: var(--caida);
+  font-weight: var(--weight-strong);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-5);
+}
+
+/* A secondary action that reads as a link, so each row keeps one key. */
+.link-action {
+  min-block-size: var(--target);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--noche);
+  font: inherit;
+  font-weight: var(--weight-label);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.link-action:hover {
+  text-decoration-thickness: 2px;
+}
+
+.key--danger {
+  border-color: var(--caida);
+  color: var(--caida);
+}
+
+.key--danger:hover {
+  background: var(--caida);
+  color: #fff;
+}
+
+.crumb {
+  padding-block-start: var(--s-3);
+  font-size: var(--text-sm);
+}
+
+.block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  padding-block: var(--s-4);
+}
+
+.danger-zone {
+  display: grid;
+  gap: var(--s-3);
+  justify-items: start;
+  max-inline-size: var(--measure);
+  padding-block: var(--s-4);
+}
+
+.panel-controls {
+  padding-block: var(--s-3);
+}
+
+.panel-controls .field {
+  max-inline-size: 22rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s-2) var(--s-5);
+  padding-block: var(--s-3);
+}
+
+.filters .field {
+  min-inline-size: min(100%, 13rem);
+}
+
+.result-count {
+  padding-block-end: var(--s-2);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.results:focus {
+  outline: none;
+}
+
+/* ---------- Facts: a ruled list of label and value, one fact per row ---------- */
+.facts {
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-3) var(--s-2);
+  border-block-end: 1px solid var(--rule);
+}
+
+.fact dt {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.fact dd {
+  margin: 0;
+}
+
+.fact-vitals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-5);
+}
+
+.vital-missing--inline {
+  max-inline-size: none;
+  text-align: start;
+}
+
+@container (min-width: 40rem) {
+  .fact {
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: var(--s-4);
+  }
+}
+
+/* ---------- Event log additions ---------- */
+.event {
+  scroll-margin-block: var(--s-6);
+}
+
+.event-action {
+  display: grid;
+  justify-items: stretch;
+  gap: var(--s-1);
+}
+
+.event-action .link-action {
+  justify-self: start;
+}
+
+@container (min-width: 48rem) {
+  .event-action .link-action {
+    justify-self: center;
+  }
+}
+
+.event-note {
+  grid-area: note;
+  display: grid;
+  gap: var(--s-3);
+  max-inline-size: 36rem;
+  padding-block: var(--s-2) var(--s-1);
+}
+
+.event-note-text {
+  color: var(--ink);
+}
+
+.event-device a {
+  color: inherit;
+}
+
+/* ---------- Emergency contacts ---------- */
+.contact-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name actions'
+    'relation actions'
+    'phone actions';
+  align-items: center;
+  gap: 0 var(--s-4);
+  padding: var(--s-3) var(--s-2);
+  border-block-end: 1px solid var(--rule);
+}
+
+.contact--editing {
+  display: block;
+}
+
+.contact-name {
+  grid-area: name;
+  font-size: var(--text-md);
+  font-weight: var(--weight-strong);
+}
+
+.contact-relation {
+  grid-area: relation;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.contact-relation:empty {
+  display: none;
+}
+
+.contact > .contact-link {
+  grid-area: phone;
+  justify-self: start;
+  min-block-size: 2.25rem;
+}
+
+.contact-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-1) var(--s-4);
+}
+
+@container (min-width: 40rem) {
+  .contact {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    grid-template-areas: 'name relation phone actions';
+    column-gap: var(--s-4);
+  }
+
+  .contact-relation:empty {
+    display: block;
+  }
+}
+
+/* ---------- People, device and reading tables ---------- */
+.persons-table .cell-alerts,
+.devices-table .cell-last,
+.devices-table .cell-device,
+.persons-table .cell-device {
+  font-size: var(--text-sm);
+}
+
+.alert-counts {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.alert-count {
+  color: var(--ink-2);
+  font-weight: var(--weight-label);
+}
+
+.alert-count--caida {
+  color: var(--caida);
+  font-weight: var(--weight-strong);
+}
+
+.kind-fall {
+  color: var(--caida);
+}
+
+.reading-seconds {
+  white-space: nowrap;
+}
+
+@container (width >= 48rem) {
+  .persons-table .cell-person,
+  .devices-table .cell-person {
+    inline-size: 18%;
+  }
+
+  .persons-table .cell-status,
+  .devices-table .cell-status {
+    inline-size: 13rem;
+  }
+
+  .persons-table .num,
+  .devices-table .num {
+    inline-size: 6.5rem;
+  }
+
+  .persons-table .cell-age,
+  .devices-table .cell-age {
+    inline-size: 10rem;
+  }
+
+  .readings-table {
+    max-inline-size: 44rem;
+  }
+
+  .readings-table .num {
+    inline-size: 8rem;
+  }
+}
+
+@container (width < 48rem) {
+  .persons-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, max-content) minmax(0, 1fr);
+    grid-template-areas:
+      'person person person'
+      'status status status'
+      'device device device'
+      'pulso spo2 .'
+      'age age age'
+      'alerts alerts alerts';
+    gap: var(--s-2) var(--s-5);
+  }
+
+  .devices-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, max-content) minmax(0, 1fr);
+    grid-template-areas:
+      'person person person'
+      'status status status'
+      'last last last'
+      'device device device'
+      'pulso spo2 .'
+      'age age age';
+    gap: var(--s-2) var(--s-5);
+  }
+
+  .readings-table tr {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-areas:
+      'time kind'
+      'pulso spo2';
+    gap: var(--s-1) var(--s-5);
+  }
+
+  .persons-table .cell-device,
+  .devices-table .cell-device {
+    grid-area: device;
+  }
+
+  .persons-table .cell-alerts {
+    grid-area: alerts;
+  }
+
+  .devices-table .cell-last {
+    grid-area: last;
+  }
+
+  .cell-time {
+    grid-area: time;
+  }
+
+  .cell-kind {
+    grid-area: kind;
+  }
+}
+
+/* ---------- Vitals chart ---------- */
+.vitals-chart {
+  padding-block: var(--s-3) var(--s-2);
+}
+
+.chart-range {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.chart-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-inline-start: var(--s-4);
+  color: var(--ink);
+  font-weight: var(--weight-label);
+}
+
+.chart-key-mark {
+  inline-size: 4px;
+  block-size: 1rem;
+  background: var(--caida);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+.chart-plots {
+  margin-block-start: var(--s-2);
+}
+
+.chart {
+  margin: 0 0 var(--s-3);
+}
+
+.chart-title {
+  padding-block: var(--s-2) var(--s-1);
+  font-weight: var(--weight-strong);
+}
+
+.chart-unit {
+  color: var(--ink-2);
+  font-weight: var(--weight-body);
+}
+
+.chart-svg {
+  display: block;
+  max-inline-size: 100%;
+  touch-action: pan-y;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--ink-3);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--senal);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot,
+.chart-end {
+  fill: var(--senal);
+}
+
+.chart-end {
+  stroke: var(--paper);
+  stroke-width: 2;
+}
+
+.chart-end-label {
+  fill: var(--ink);
+  font-size: 14px;
+  font-weight: var(--weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-cursor {
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
+.chart-fall-ring {
+  stroke: var(--paper);
+  stroke-width: 8;
+}
+
+.chart-fall {
+  stroke: var(--caida);
+  stroke-width: 4;
+}
+
+.chart-summary {
+  max-inline-size: var(--measure);
+  margin-block-start: var(--s-1);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.chart-readout {
+  min-block-size: 3.25rem;
+  padding-block: var(--s-2);
+  border-block-start: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-readout-item {
+  margin-inline-end: var(--s-3);
+  white-space: nowrap;
+}
+
+.chart-readout-fall {
+  color: var(--caida);
+}
+
+.chart-note {
+  max-inline-size: var(--measure);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Confirm dialog ---------- */
+.confirm {
+  inline-size: min(32rem, calc(100% - 2rem));
+  padding: 0;
+  border: 3px solid var(--ink);
+  border-radius: var(--r-key);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.confirm:modal {
+  overscroll-behavior: contain;
+}
+
+.confirm::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: rgb(22 36 46 / 0.55);
+}
+
+.confirm-title {
+  padding: var(--s-4) var(--s-4) var(--s-2);
+  font-size: var(--text-md);
+  font-weight: var(--weight-strong);
+}
+
+.confirm-body {
+  padding-inline: var(--s-4);
+  color: var(--ink-2);
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s-3);
+  padding: var(--s-4);
+}
+
+@media (forced-colors: active) {
+  .chart-line,
+  .chart-dot,
+  .chart-end {
+    forced-color-adjust: none;
+    stroke: CanvasText;
+  }
+
+  .chart-dot,
+  .chart-end {
+    fill: CanvasText;
+  }
+
+  .chart-fall {
+    stroke: Highlight;
+  }
+}

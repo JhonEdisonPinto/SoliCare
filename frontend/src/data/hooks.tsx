@@ -4,7 +4,7 @@ import { ApiError } from './api';
 import type { CareRepository } from './store';
 import type { Alert, CareData, Device, Reading } from './types';
 import { deriveAlerts, isOpen } from './alerts';
-import { summarizePeople, unassignedDevices, type PersonSummary } from './summary';
+import { summarizeDevices, summarizePeople, unassignedDevices, type DeviceSummary, type PersonSummary } from './summary';
 import { usePolling } from './polling';
 
 /** Readings fetched per device for summaries: 2.5 h at the 30 s reporting cadence. */
@@ -165,6 +165,18 @@ export function usePeopleSummary(): { people: PersonSummary[]; unassigned: Devic
       unassigned: unassignedDevices(people, devices),
     }),
     [people, devices, readingsByDevice, alerts, now, settings.offlineWindowMinutes],
+  );
+}
+
+/** Every device (reported by the server or assigned and never seen) with status, person and latest valid vitals. */
+export function useDeviceSummaries(): DeviceSummary[] {
+  const { devices, readingsByDevice } = useTelemetry();
+  const { people, settings } = useCare();
+  const { alerts } = useAlerts();
+  const now = useReferenceNow();
+  return useMemo(
+    () => summarizeDevices(devices, people, readingsByDevice, alerts, now, settings.offlineWindowMinutes),
+    [devices, people, readingsByDevice, alerts, now, settings.offlineWindowMinutes],
   );
 }
 

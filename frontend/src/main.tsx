@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom';
 import '@fontsource-variable/atkinson-hyperlegible-next';
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/views.css';
 import { DEMO_MODE, httpSource, setTelemetrySource, type TelemetrySource } from './data/api';
 import { createLocalCareRepository, type CareRepository } from './data/store';
 import { DataProvider } from './data/hooks';

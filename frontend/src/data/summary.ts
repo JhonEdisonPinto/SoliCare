@@ -72,3 +72,59 @@ export function unassignedDevices(people: readonly Person[], devices: readonly D
   const assigned = new Set(people.map((person) => person.deviceId).filter(Boolean));
   return devices.filter((device) => !assigned.has(device.device_id));
 }
+
+export type DeviceSummary = {
+  id: string;
+  /** Undefined when a person has the device assigned but the server has never received a report from it. */
+  device: Device | undefined;
+  person: Person | undefined;
+  status: DeviceStatus;
+  readings: readonly Reading[];
+  pulso: LatestVital;
+  spo2: LatestVital;
+  openAlerts: Alert[];
+  rank: number;
+};
+
+/** Every device the server knows plus devices assigned to a person that never reported, by need then id. */
+export function summarizeDevices(
+  devices: readonly Device[],
+  people: readonly Person[],
+  readingsByDevice: Readonly<Record<string, readonly Reading[]>>,
+  alerts: readonly Alert[],
+  now: number,
+  offlineWindowMinutes: number,
+): DeviceSummary[] {
+  const deviceById = new Map(devices.map((device) => [device.device_id, device]));
+  const personByDevice = new Map<string, Person>();
+  for (const person of people) if (person.deviceId) personByDevice.set(person.deviceId, person);
+  const ids = new Set<string>([...deviceById.keys(), ...personByDevice.keys()]);
+  return [...ids]
+    .map((id): DeviceSummary => {
+      const device = deviceById.get(id);
+      const status = deviceStatus(device, now, offlineWindowMinutes);
+      const readings = readingsByDevice[id] ?? EMPTY;
+      const openAlerts = alerts.filter((alert) => isOpen(alert) && alert.deviceId === id);
+      return {
+        id,
+        device,
+        person: personByDevice.get(id),
+        status,
+        readings,
+        pulso: latestOf(readings, device, 'pulso'),
+        spo2: latestOf(readings, device, 'spo2'),
+        openAlerts,
+        rank: rankOf(status, openAlerts),
+      };
+    })
+    .sort((a, b) => a.rank - b.rank || a.id.localeCompare(b.id, 'es', { numeric: true }));
+}
+
+/** Device ids a person can be given: devices the server reports that nobody else has, plus their current one. */
+export function assignableDevices(people: readonly Person[], devices: readonly Device[], personId?: string): string[] {
+  const takenByOthers = new Set(people.filter((person) => person.id !== personId).map((person) => person.deviceId));
+  const current = people.find((person) => person.id === personId)?.deviceId;
+  const ids = devices.map((device) => device.device_id).filter((id) => !takenByOthers.has(id));
+  if (current && !ids.includes(current)) ids.unshift(current);
+  return ids.sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+}

@@ -1,22 +1,113 @@
 # Frontend
 
 Panel web de SoliCare construido con React, Vite y TypeScript.
-La interfaz está optimizada para escritorio, tablet y celular, con navegación
-lateral desplegable en pantallas pequeñas.
+La interfaz está pensada para escritorio, tablet y celular (desde 360 px, sin
+desplazamiento horizontal), con una barra de pestañas de texto que se reparte en
+dos filas en pantallas pequeñas.
 
 Panel web para familiares, cuidadores y personal de la central de control.
 
-## Vistas previstas
+## Vistas
 
-- Resumen de dispositivos y estado de conexión.
-- Historial de pulso y SpO2 como señales de seguimiento.
-- Estado del giroscopio y detección de caídas con pre-alerta.
-- Alertas activas e historial de eventos.
-- Contactos de emergencia.
-- Configuración de umbrales y horarios de inactividad.
+| Ruta | Qué muestra |
+| --- | --- |
+| `/` | Resumen: eventos abiertos, personas ordenadas por urgencia y dispositivos sin persona asignada. |
+| `/personas` | Tabla de personas con estado, dispositivo, últimas lecturas válidas y alertas abiertas. Permite agregar personas. |
+| `/personas/:personId` | Detalle: datos de la persona (editar y eliminar), dispositivo asignado (asignar, cambiar o quitar), historial de pulso y SpO2, contactos de emergencia ("Contactos que serán notificados") e historial de alertas. |
+| `/dispositivos` | Todos los dispositivos que conoce el servidor más los asignados que todavía no han reportado. |
+| `/dispositivos/:deviceId` | Detalle: estado, último reporte, persona asignada, historial de pulso y SpO2, lecturas recientes y caídas. |
+| `/alertas` | Diario de alertas con filtros por estado y tipo. Se pueden marcar como atendidas (con nota opcional) y como resueltas. |
+| `/configuracion` | Ventana sin reporte, frecuencia de actualización, origen de los datos y borrado de datos locales. |
+
+Pulso y SpO2 se presentan como señales de seguimiento, no como un diagnóstico.
+Una lectura de `0` significa "sin lectura válida": nunca se dibuja ni se muestra
+como valor. Los contactos de emergencia solo se muestran para que se les llame:
+este panel no envía mensajes ni llamadas.
 
 La persona mayor no necesita operar este panel ni usar una aplicación para que
 el dispositivo funcione.
+
+## Datos: API y almacén local
+
+Los datos del panel vienen de dos lugares.
+
+**Del servidor (API de SoliCare, solo lectura):**
+
+- `GET /api/v1/devices`: dispositivos, último reporte y últimos valores.
+- `GET /api/v1/devices/:id/telemetry?limit=N`: lecturas de un dispositivo
+  (el servidor permite hasta 500 por petición).
+
+De ahí salen el estado de cada dispositivo (en línea, sin reporte reciente, sin
+datos todavía), las lecturas y las caídas. El panel consulta al servidor cada
+15 s por defecto y se detiene mientras la pestaña está oculta.
+
+**Del almacén local (el navegador), porque el backend todavía no lo tiene:**
+
+- personas, su relación y el dispositivo asignado;
+- contactos de emergencia;
+- el estado de las alertas (atendida, resuelta, notas) y un diario de las
+  alertas observadas, para que el historial no se pierda cuando las lecturas
+  salen de la ventana de la API;
+- los ajustes: minutos sin reporte antes de avisar (30 por defecto) y segundos
+  entre actualizaciones (15 por defecto).
+
+Las alertas se derivan en el cliente: una lectura `caida` es una alerta de
+caída, y un dispositivo sin reportes durante más de la ventana configurada es
+una alerta de conexión. Esa lógica es una función pura (`src/data/alerts.ts`).
+
+### Una sola interfaz para cambiar el almacén
+
+Las vistas no leen `localStorage` ni llaman a `fetch`. Solo usan los hooks de
+`src/data/hooks.tsx`, que se apoyan en dos interfaces:
+
+- `TelemetrySource` (`src/data/api.ts`): `listDevices` y `listTelemetry`. La
+  implementan el cliente HTTP y la simulación del modo demostración.
+- `CareRepository` (`src/data/store.ts`): lectura sincrónica del estado
+  (`getSnapshot`, `subscribe`) y escrituras asíncronas (personas, contactos,
+  alertas, ajustes, `reset`). Las validaciones lanzan `StoreValidationError`
+  con un mensaje en español y el campo al que pertenece.
+
+Cuando el backend ofrezca personas, contactos y alertas, basta con escribir otra
+implementación de `CareRepository` (por ejemplo, una que llame a la API) y
+pasarla a `DataProvider` en `src/main.tsx`. Las vistas no cambian.
+
+Otros módulos: `src/data/summary.ts` (personas y dispositivos ordenados por
+urgencia), `src/data/polling.ts` (consulta periódica que se pausa con la pestaña
+oculta) y `src/lib/` (funciones puras de tiempo, estado, lecturas y gráficos).
+
+### Modo demostración
+
+Con `VITE_DEMO_MODE=true` el panel usa datos simulados y deterministas, con la
+misma forma que los de la API, en lugar del servidor. La interfaz lo indica con
+la marca "Demostración" en la barra superior. Incluye personas, contactos,
+una caída reciente, un dispositivo sin reporte y uno que nunca ha reportado.
+Sin esa variable, la aplicación nunca muestra datos inventados.
+
+No lo active en producción.
+
+### Claves de `localStorage`
+
+| Clave | Contenido |
+| --- | --- |
+| `solicare.care.v1` | Almacén local real (personas, contactos, alertas, diario, ajustes). |
+| `solicare.demo.care.v1` | Lo mismo en modo demostración, separado para que las personas simuladas nunca se mezclen con las reales. |
+| `solicare.demo.start` | Solo en modo demostración: instante de inicio de la simulación, para que recargar la página no cree una caída nueva cada vez. Se renueva pasadas 2 h. |
+| `solicare.care.v1.corrupt-<marca de tiempo>` (y su equivalente demo) | Copia de un valor ilegible, que se conserva en vez de sobrescribirlo. |
+
+Los datos locales solo existen en ese navegador. En Configuración, "Borrar datos
+locales" los elimina (en modo demostración, vuelve a los datos de ejemplo); no
+borra nada del servidor.
+
+## Variables de entorno
+
+| Variable | Descripción |
+| --- | --- |
+| `VITE_API_URL` | URL pública del backend, sin barra final. Por defecto `http://localhost:8080`. |
+| `VITE_DEMO_MODE` | `true` activa el modo demostración. Por defecto `false`. |
+
+Hay un ejemplo en `.env.example`. `vercel.json` redirige todas las rutas a
+`index.html`, de modo que los enlaces profundos (por ejemplo `/personas/abc`)
+sobreviven a una recarga.
 
 ## Comandos
 
@@ -25,3 +116,5 @@ npm install
 npm run dev
 npm run build
 ```
+
+Para probar sin backend: `VITE_DEMO_MODE=true npm run dev`.
