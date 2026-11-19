@@ -32,7 +32,20 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
         // Landmarks: one banner, one main, one primary navigation, one h1.
         await expect(page.getByRole('banner')).toHaveCount(1);
         await expect(page.getByRole('main')).toHaveCount(1);
-        await expect(page.getByRole('navigation', { name: 'Principal' })).toHaveCount(1);
+        // On a phone the primary navigation is a drawer: absent while closed, present once the menu is open.
+        const nav = page.getByRole('navigation', { name: 'Principal' });
+        if (viewport.width <= 768) {
+          await expect(nav).toHaveCount(0);
+          await page.getByRole('button', { name: 'Abrir menú' }).click();
+          await expect(nav).toHaveCount(1);
+          await page.keyboard.press('Escape');
+          await expect(nav).toHaveCount(0);
+          // Start the Tab walk from a clean page: the drawer left focus on the menu button.
+          await page.goto(path);
+          await settle(page);
+        } else {
+          await expect(nav).toHaveCount(1);
+        }
         await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
 
         // Tab from the top of the page: every visible control is reached, each shows a focus indicator,
@@ -47,7 +60,8 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
           all.forEach((element, index) => element.setAttribute('data-e2e-i', String(index)));
           return all.length;
         }, INTERACTIVE);
-        expect(expected).toBeGreaterThan(5);
+        // Sanity floor: on a phone the closed drawer hides the navigation, which leaves few controls on a 404.
+        expect(expected).toBeGreaterThan(viewport.width <= 768 ? 3 : 5);
 
         await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
         const reached = new Set<string>();
@@ -145,14 +159,14 @@ test.describe('axe in interactive states', () => {
 
       await page.goto('/personas');
       await settle(page);
-      await page.getByRole('button', { name: 'Agregar persona' }).click();
+      await page.getByRole('button', { name: 'Añadir persona' }).click();
       await page.getByRole('button', { name: 'Guardar persona' }).click();
       await expect(page.getByLabel('Nombre')).toHaveAttribute('aria-invalid', 'true');
       expect(await scan(page), 'person form with an error').toEqual([]);
 
       await page.goto('/alertas');
       await settle(page);
-      await page.getByRole('button', { name: /Agregar nota/ }).first().click();
+      await page.getByRole('button', { name: /Añadir nota/ }).first().click();
       expect(await scan(page), 'note field open').toEqual([]);
       await page.getByRole('button', { name: /Atender con nota/ }).click();
       await expect(page.locator('.toast')).toBeVisible();
@@ -160,7 +174,7 @@ test.describe('axe in interactive states', () => {
 
       await page.goto('/personas/demo-p1');
       await settle(page);
-      await page.getByRole('button', { name: 'Agregar contacto' }).click();
+      await page.getByRole('button', { name: 'Añadir contacto' }).click();
       await page.getByRole('button', { name: 'Guardar contacto' }).click();
       expect(await scan(page), 'contact form with an error').toEqual([]);
       await page.getByRole('button', { name: 'Eliminar persona' }).click();

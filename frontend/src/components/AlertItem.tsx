@@ -1,10 +1,10 @@
+import { AlertTriangle, CheckCircle2, Phone, WifiOff } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { Alert, Person } from '../data/types';
-import { useCare, useCareActions } from '../data/hooks';
-import { formatFull, formatWhen, formatWhenParts, timeAgo } from '../lib/time';
-import { Stamp, type StampKind } from './Stamp';
-import { useToast } from './Toast';
+import { formatFull, formatWhen, timeAgo } from '../lib/time';
+import { Pill, type PillTone } from './Pill';
+import { contactsToCall, useAlertActions } from './useAlertActions';
 
 function When({ iso, now }: { iso: string; now: number }) {
   return (
@@ -18,21 +18,19 @@ type Props = {
   alert: Alert;
   person: Person | undefined;
   now: number;
-  /** Offers "Agregar nota" so a pending alert can be acknowledged with a note. */
+  /** Offers "Añadir nota" so a pending alert can be acknowledged with a note. */
   withNote?: boolean;
   /** Called after an action succeeds, so a list that filters by state can move focus when the row leaves it. */
   onActed?: () => void;
 };
 
 /**
- * One alert as a line of the event log: stamp, time, person, device, age and the single next action.
- * An open fall is the only row with a colored background; connection alerts stay plain. Resolved alerts
- * stay readable but offer no action.
+ * One alert as a card: icon, what happened, who and when, the state, and the single next action. An open
+ * fall is the only card with a red tint; connection alerts are amber; resolved alerts stay readable but
+ * offer no action.
  */
 export function AlertItem({ alert, person, now, withNote = false, onActed }: Props) {
-  const actions = useCareActions();
-  const { acknowledgements } = useCare();
-  const toast = useToast();
+  const act = useAlertActions(alert);
   const noteId = useId();
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState('');
@@ -47,7 +45,7 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
   const resolved = alert.state === 'resuelta';
 
   useEffect(() => {
-    // After an action the key that was pressed is replaced; keep keyboard focus inside the row.
+    // After an action the key that was pressed is replaced; keep keyboard focus inside the card.
     if (!refocus.current) return;
     refocus.current = false;
     (key.current ?? item.current)?.focus();
@@ -57,24 +55,17 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
     if (noteOpen) noteField.current?.focus();
   }, [noteOpen]);
 
-  const act = async (kind: 'atender' | 'resolver', text?: string) => {
-    const previous = acknowledgements[alert.id];
+  const run = async (kind: 'atender' | 'resolver', text?: string) => {
     refocus.current = true;
-    if (kind === 'atender') await actions.acknowledgeAlert(alert.id, text);
-    else await actions.resolveAlert(alert.id);
+    await act(kind, text);
     setNoteOpen(false);
     setNote('');
-    toast({
-      text: kind === 'atender' ? 'Alerta atendida' : 'Alerta resuelta',
-      actionLabel: 'Deshacer',
-      onAction: () => void actions.restoreAlertAck(alert.id, previous),
-    });
     onActed?.();
   };
 
   const submitNote = (event: FormEvent) => {
     event.preventDefault();
-    void act('atender', note);
+    void run('atender', note);
   };
 
   const closeNote = () => {
@@ -83,71 +74,81 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
     noteToggle.current?.focus();
   };
 
-  const stampKind: StampKind = resolved ? 'atendida' : isFall ? (pending ? 'caida' : 'caida-atendida') : pending ? 'sin-reporte' : 'atendida';
-  const contacts = isFall && !resolved && person ? person.contacts.filter((contact) => contact.phone).slice(0, 2) : [];
+  const tone: PillTone = resolved ? 'neutral' : pending ? (isFall ? 'danger' : 'warn') : 'info';
+  const stateLabel = resolved ? 'Resuelta' : pending ? 'Pendiente' : 'Atendida';
+  const contacts = contactsToCall(alert, person);
   const name = person ? person.name : `Dispositivo ${alert.deviceId}`;
   const subject = `${isFall ? 'caída' : 'sin reporte'} de ${name}`;
-  const when = formatWhenParts(alert.at, now);
+  const Icon = resolved ? CheckCircle2 : isFall ? AlertTriangle : WifiOff;
 
   return (
     <li ref={item} tabIndex={-1} className={`event event--${alert.kind} event--${alert.state}`}>
-      <span className="event-stamp">
-        <Stamp kind={stampKind}>{isFall ? 'Caída' : 'Sin reporte'}</Stamp>
+      <span className="event-icon" aria-hidden="true">
+        <Icon size={18} />
       </span>
-      <time className="event-time" dateTime={alert.at} title={formatFull(alert.at)}>
-        {when.day && <span className="event-day">{when.day} </span>}
-        <span className="event-clock">{when.time}</span>
-      </time>
-      <span className="event-subject">
-        {person ? (
-          <Link className="event-name" to={`/personas/${person.id}`}>
-            {person.name}
-          </Link>
-        ) : (
-          <Link className="event-name" to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>
-            {name}
-          </Link>
-        )}
-        {person?.relation ? <span className="event-relation">{person.relation}</span> : null}
-      </span>
-      {person ? (
-        // Without a person the name already is "Dispositivo <id>", so the id is not repeated.
-        <span className="event-device">
-          <span className="visually-hidden">Dispositivo </span>
-          <Link to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>{alert.deviceId}</Link>
-        </span>
-      ) : null}
-      <span className="event-age">{timeAgo(alert.at, now)}</span>
-      <div className="event-detail">
-        {alert.acknowledgedAt ? (
-          <p>
-            Atendida <When iso={alert.acknowledgedAt} now={now} />.
-            {alert.acknowledgeNote ? <span className="event-note-text"> Nota: {alert.acknowledgeNote}</span> : null}
-          </p>
-        ) : null}
-        {resolved ? (
-          <p>
-            Resuelta <When iso={alert.resolvedAt ?? alert.at} now={now} />
-            {alert.resolvedBy === 'datos' ? ': el dispositivo volvió a reportar.' : '.'}
-            {alert.resolveNote ? <span className="event-note-text"> Nota: {alert.resolveNote}</span> : null}
-          </p>
-        ) : null}
-        {contacts.length > 0 ? (
-          <p className="event-contacts">
-            <span className="event-contacts-label">Llamar:</span>
-            {contacts.map((contact) => (
-              <a key={contact.id} className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
-                {contact.name}
-                {contact.relation ? ` (${contact.relation.toLowerCase()})` : ''}{' '}
-                <span className="contact-phone">{contact.phone}</span>
-              </a>
-            ))}
-          </p>
-        ) : null}
+      <div className="event-main">
+        <div className="event-head">
+          <strong className="event-title">{isFall ? 'Caída' : 'Sin reporte'}</strong>
+          <Pill tone={tone}>{stateLabel}</Pill>
+        </div>
+        <p className="event-subject">
+          {person ? (
+            <Link className="event-name" to={`/personas/${person.id}`}>
+              {person.name}
+            </Link>
+          ) : (
+            <Link className="event-name" to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>
+              {name}
+            </Link>
+          )}
+          {person?.relation ? <span className="event-relation"> · {person.relation}</span> : null}
+          {person ? (
+            // Without a person the name already is "Dispositivo <id>", so the id is not repeated.
+            <span className="event-device">
+              {' '}
+              · <span className="visually-hidden">Dispositivo </span>
+              <Link to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>{alert.deviceId}</Link>
+            </span>
+          ) : null}
+        </p>
+        <p className="event-time">
+          <time dateTime={alert.at} title={formatFull(alert.at)}>
+            {formatWhen(alert.at, now)}
+          </time>{' '}
+          <span className="event-age">({timeAgo(alert.at, now)})</span>
+        </p>
+        <div className="event-detail">
+          {alert.acknowledgedAt ? (
+            <p>
+              Atendida <When iso={alert.acknowledgedAt} now={now} />.
+              {alert.acknowledgeNote ? <span className="event-note-text"> Nota: {alert.acknowledgeNote}</span> : null}
+            </p>
+          ) : null}
+          {resolved ? (
+            <p>
+              Resuelta <When iso={alert.resolvedAt ?? alert.at} now={now} />
+              {alert.resolvedBy === 'datos' ? ': el dispositivo volvió a reportar.' : '.'}
+              {alert.resolveNote ? <span className="event-note-text"> Nota: {alert.resolveNote}</span> : null}
+            </p>
+          ) : null}
+          {contacts.length > 0 ? (
+            <p className="event-contacts">
+              <Phone size={14} aria-hidden="true" />
+              <span className="event-contacts-label">Llamar:</span>
+              {contacts.map((contact) => (
+                <a key={contact.id} className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
+                  {contact.name}
+                  {contact.relation ? ` (${contact.relation.toLowerCase()})` : ''}{' '}
+                  <span className="contact-phone">{contact.phone}</span>
+                </a>
+              ))}
+            </p>
+          ) : null}
+        </div>
       </div>
       {!resolved ? (
         <div className="event-action">
-          <button ref={key} type="button" className="key" onClick={() => void act(pending ? 'atender' : 'resolver')}>
+          <button ref={key} type="button" className={pending ? 'btn btn--primary' : 'btn btn--outline'} onClick={() => void run(pending ? 'atender' : 'resolver')}>
             {pending ? 'Marcar como atendida' : 'Marcar como resuelta'}
             <span className="visually-hidden">: {subject}</span>
           </button>
@@ -155,12 +156,12 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
             <button
               ref={noteToggle}
               type="button"
-              className="link-action"
+              className="text-button"
               aria-expanded={noteOpen}
               aria-controls={noteId}
               onClick={() => (noteOpen ? closeNote() : setNoteOpen(true))}
             >
-              Agregar nota<span className="visually-hidden">: {subject}</span>
+              Añadir nota<span className="visually-hidden">: {subject}</span>
             </button>
           ) : null}
         </div>
@@ -187,10 +188,10 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
             />
           </div>
           <div className="form-actions">
-            <button type="submit" className="key">
+            <button type="submit" className="btn btn--primary">
               Atender con nota<span className="visually-hidden">: {subject}</span>
             </button>
-            <button type="button" className="link-action" onClick={closeNote}>
+            <button type="button" className="text-button" onClick={closeNote}>
               Cancelar
             </button>
           </div>

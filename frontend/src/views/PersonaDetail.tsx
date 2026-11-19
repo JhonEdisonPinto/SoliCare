@@ -1,17 +1,19 @@
+import { ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertItem } from '../components/AlertItem';
-import { BlockHead } from '../components/BlockHead';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SelectField, TextField } from '../components/Field';
 import { PageHeader } from '../components/PageHeader';
+import { PanelHead } from '../components/PanelHead';
 import { PersonForm } from '../components/PersonForm';
 import { ReadingAge } from '../components/ReadingAge';
-import { StatusMarkFor } from '../components/StatusMark';
+import { StatusPillFor } from '../components/StatusPill';
 import { useToast } from '../components/Toast';
 import { VitalsPanel } from '../components/VitalsPanel';
 import { useAlerts, useCare, useCareActions, useDeviceHistory, useNow, usePeopleSummary, useReferenceNow, useTelemetry } from '../data/hooks';
 import { assignableDevices } from '../data/summary';
+import { avatarTone, initials } from '../lib/people';
 import type { EmergencyContact, Person } from '../data/types';
 import type { LatestVital } from '../lib/vitals';
 import { text, useForm } from '../lib/useForm';
@@ -61,10 +63,10 @@ function ContactForm({ personId, contact, onDone, onCancel }: { personId: string
         </p>
       ) : null}
       <div className="form-actions">
-        <button type="submit" className="key" disabled={pending}>
+        <button type="submit" className="btn btn--primary" disabled={pending}>
           Guardar contacto
         </button>
-        <button type="button" className="link-action" onClick={onCancel}>
+        <button type="button" className="text-button" onClick={onCancel}>
           Cancelar
         </button>
       </div>
@@ -83,7 +85,7 @@ function ContactsBlock({ person }: { person: Person }) {
   const back = useRef<string | null>(null);
 
   useEffect(() => {
-    // When a form closes, focus goes back to the control that opened it (or to "Agregar contacto").
+    // When a form closes, focus goes back to the control that opened it (or to "Añadir contacto").
     if (editing !== null || back.current === null) return;
     const target = back.current === 'new' ? addKey.current : list.current?.querySelector<HTMLElement>(`[data-edit="${back.current}"]`);
     (target ?? addKey.current)?.focus();
@@ -104,13 +106,21 @@ function ContactsBlock({ person }: { person: Person }) {
   };
 
   return (
-    <section className="block" aria-labelledby="contactos">
-      <BlockHead id="contactos" title="Contactos que serán notificados" count={person.contacts.length}>
-        Por ahora SoliCare no envía mensajes ni llamadas: muestra estos contactos para que se les llame cuando hay una caída. Las alertas muestran los
-        dos primeros de la lista.
-      </BlockHead>
+    <section className="panel" aria-labelledby="contactos">
+      <PanelHead
+        id="contactos"
+        kicker="Emergencias"
+        title="Contactos que serán notificados"
+        count={person.contacts.length}
+        note="Por ahora SoliCare no envía mensajes ni llamadas: muestra estos contactos para que se les llame cuando hay una caída. Las alertas muestran los dos primeros de la lista."
+        actions={
+          <button ref={addKey} type="button" className="btn btn--outline" aria-expanded={editing === 'new'} onClick={() => setEditing(editing === 'new' ? null : 'new')}>
+            <Plus size={16} aria-hidden="true" /> Añadir contacto
+          </button>
+        }
+      />
       {person.contacts.length === 0 && editing !== 'new' ? (
-        <p className="empty-row">Esta persona no tiene contactos de emergencia. Agregue a quien debe recibir la llamada si hay una caída.</p>
+        <p className="panel-empty">Esta persona no tiene contactos de emergencia. Añade a quien debe recibir la llamada si hay una caída.</p>
       ) : (
         <ul className="contact-list" ref={list}>
           {person.contacts.map((contact) =>
@@ -120,17 +130,22 @@ function ContactsBlock({ person }: { person: Person }) {
               </li>
             ) : (
               <li key={contact.id} className="contact">
-                <span className="contact-name">{contact.name}</span>
-                <span className="contact-relation">{contact.relation}</span>
+                <span className={`person-avatar person-avatar--${avatarTone(contact.id)}`} aria-hidden="true">
+                  {initials(contact.name)}
+                </span>
+                <span className="contact-who">
+                  <span className="contact-name">{contact.name}</span>
+                  <span className="contact-relation">{contact.relation}</span>
+                </span>
                 <a className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
                   <span className="visually-hidden">Llamar a {contact.name}: </span>
                   <span className="contact-phone">{contact.phone}</span>
                 </a>
                 <span className="contact-actions">
-                  <button type="button" className="key key--small" data-edit={contact.id} onClick={() => setEditing(contact.id)}>
+                  <button type="button" className="btn btn--outline btn--small" data-edit={contact.id} onClick={() => setEditing(contact.id)}>
                     Editar<span className="visually-hidden"> a {contact.name}</span>
                   </button>
-                  <button type="button" className="link-action" onClick={() => setRemoving(contact)}>
+                  <button type="button" className="text-button" onClick={() => setRemoving(contact)}>
                     Eliminar<span className="visually-hidden"> a {contact.name}</span>
                   </button>
                 </span>
@@ -144,11 +159,6 @@ function ContactsBlock({ person }: { person: Person }) {
           ) : null}
         </ul>
       )}
-      <div className="block-actions">
-        <button ref={addKey} type="button" className="key" aria-expanded={editing === 'new'} onClick={() => setEditing(editing === 'new' ? null : 'new')}>
-          Agregar contacto
-        </button>
-      </div>
       <ConfirmDialog
         open={removing !== null}
         title={removing ? `¿Eliminar a ${removing.name}?` : ''}
@@ -180,7 +190,7 @@ function DeviceAssignment({ person }: { person: Person }) {
         key={person.deviceId ?? 'none'}
         defaultValue={person.deviceId ?? ''}
         error={errors.deviceId}
-        hint="Elija otro para cambiarlo, o Sin dispositivo para quitarlo. Solo aparecen dispositivos que el servidor ya conoce y que nadie más tiene."
+        hint="Elige otro para cambiarlo, o Sin dispositivo para quitarlo. Solo aparecen dispositivos que el servidor ya conoce y que nadie más tiene."
       >
         <option value="">Sin dispositivo</option>
         {options.map((id) => (
@@ -195,7 +205,7 @@ function DeviceAssignment({ person }: { person: Person }) {
         </p>
       ) : null}
       <div className="form-actions">
-        <button type="submit" className="key" disabled={pending}>
+        <button type="submit" className="btn btn--primary" disabled={pending}>
           Guardar dispositivo
         </button>
       </div>
@@ -234,7 +244,7 @@ export function PersonaDetail() {
     return (
       <>
         <PageHeader title="Persona no encontrada" />
-        <p className="empty-row">
+        <p className="panel panel-empty">
           Esta persona ya no existe en este navegador. <Link to="/personas">Ver todas las personas</Link>
         </p>
       </>
@@ -257,30 +267,29 @@ export function PersonaDetail() {
 
   return (
     <>
-      <p className="crumb">
-        <Link to="/personas">Todas las personas</Link>
+      <p className="back-link">
+        <Link to="/personas">
+          <ChevronLeft size={15} aria-hidden="true" /> Todas las personas
+        </Link>
       </p>
-      <PageHeader title={person.name}>
-        <p className="updated">{person.relation || 'Sin relación indicada'}</p>
-        <div className="status-line-end">
-          <button ref={editKey} type="button" className="key" aria-expanded={editing} aria-controls="editar-persona" onClick={() => setEditing((value) => !value)}>
-            Editar datos
-          </button>
-          <button type="button" className="link-action" onClick={() => setConfirming(true)}>
-            Eliminar persona
-          </button>
-        </div>
+      <PageHeader eyebrow="Persona" title={person.name} subtitle={<p>{person.relation || 'Sin relación indicada'}</p>}>
+        <button ref={editKey} type="button" className="btn btn--primary" aria-expanded={editing} aria-controls="editar-persona" onClick={() => setEditing((value) => !value)}>
+          <Pencil size={16} aria-hidden="true" /> Editar datos
+        </button>
+        <button type="button" className="btn btn--danger-outline" onClick={() => setConfirming(true)}>
+          <Trash2 size={16} aria-hidden="true" /> Eliminar persona
+        </button>
       </PageHeader>
 
       {editing ? (
-        <section className="block" id="editar-persona" aria-labelledby="editar-titulo">
-          <BlockHead id="editar-titulo" title="Editar datos" />
+        <section className="panel" id="editar-persona" aria-labelledby="editar-titulo">
+          <PanelHead id="editar-titulo" title="Editar datos" kicker="Persona" />
           <PersonForm person={person} onDone={() => setEditing(false)} onCancel={() => setEditing(false)} />
         </section>
       ) : null}
 
-      <section className="block" aria-labelledby="dispositivo">
-        <BlockHead id="dispositivo" title="Dispositivo" />
+      <section className="panel" aria-labelledby="dispositivo">
+        <PanelHead id="dispositivo" title="Dispositivo" kicker="Seguimiento" />
         {person.deviceId ? (
           <dl className="facts">
             <div className="fact">
@@ -292,7 +301,7 @@ export function PersonaDetail() {
             <div className="fact">
               <dt>Estado</dt>
               <dd>
-                <StatusMarkFor status={row?.status ?? 'nunca'} lastSeenAt={device?.last_seen_at} known={known} now={now} />
+                <StatusPillFor status={row?.status ?? 'nunca'} lastSeenAt={device?.last_seen_at} known={known} now={now} />
               </dd>
             </div>
             <div className="fact">
@@ -319,24 +328,24 @@ export function PersonaDetail() {
             ) : null}
           </dl>
         ) : (
-          <p className="empty-row">Esta persona no tiene un dispositivo asignado, así que SoliCare no puede mostrar su estado ni sus lecturas.</p>
+          <p className="panel-empty">Esta persona no tiene un dispositivo asignado, así que SoliCare no puede mostrar su estado ni sus lecturas.</p>
         )}
         <DeviceAssignment person={person} />
       </section>
 
-      <section className="block" aria-labelledby="senales">
-        <BlockHead id="senales" title="Pulso y SpO2" />
+      <section className="panel" aria-labelledby="senales">
+        <PanelHead id="senales" title="Pulso y SpO2" kicker="Seguimiento" />
         {person.deviceId ? (
           <VitalsPanel history={history} limit={limit} onLimitChange={setLimit} />
         ) : (
-          <p className="empty-row">Asigne un dispositivo para ver aquí el historial de pulso y SpO2.</p>
+          <p className="panel-empty">Asigna un dispositivo para ver aquí el historial de pulso y SpO2.</p>
         )}
       </section>
 
       <ContactsBlock person={person} />
 
-      <section className="block" aria-labelledby="historial">
-        <BlockHead id="historial" title="Historial de alertas" count={personAlerts.length} />
+      <section className="panel" aria-labelledby="historial">
+        <PanelHead id="historial" title="Historial de alertas" kicker="Seguridad" count={personAlerts.length} />
         {personAlerts.length > 0 ? (
           <ul className="event-log">
             {personAlerts.map((alert) => (
@@ -344,7 +353,7 @@ export function PersonaDetail() {
             ))}
           </ul>
         ) : (
-          <p className="empty-row">
+          <p className="panel-empty">
             {person.deviceId ? 'No se han detectado caídas ni interrupciones en los reportes de su dispositivo.' : 'Sin dispositivo ni alertas anteriores que mostrar.'}
           </p>
         )}

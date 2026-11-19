@@ -40,24 +40,22 @@ export function VitalsPanel({
         </SelectField>
       </form>
       {status === 'unreachable' ? (
-        <div className="system-row system-row--problem" role="alert">
-          <div className="system-body">
-            <h3 className="system-title">No se pudieron cargar las lecturas</h3>
+        <div className="notice notice--problem" role="alert">
+          <div className="notice-body">
+            <p className="notice-title">No se pudieron cargar las lecturas</p>
             <p>{error} {readings.length > 0 ? 'Abajo se ven las últimas lecturas que sí se cargaron.' : null}</p>
           </div>
-          <div className="system-action">
-            <button type="button" className="key" onClick={refresh}>
-              Reintentar ahora
-            </button>
-          </div>
+          <button type="button" className="btn btn--outline" onClick={refresh}>
+            Reintentar ahora
+          </button>
         </div>
       ) : null}
       {status === 'loading' ? (
-        <p className="empty-row" role="status">
+        <p className="panel-empty" role="status">
           Cargando lecturas…
         </p>
       ) : readings.length === 0 && status === 'ready' ? (
-        <p className="empty-row">El servidor todavía no tiene lecturas de este dispositivo.</p>
+        <p className="panel-empty">El servidor todavía no tiene lecturas de este dispositivo.</p>
       ) : (
         <VitalsChart readings={readings} now={now} />
       )}

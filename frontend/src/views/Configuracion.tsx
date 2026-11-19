@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { BlockHead } from '../components/BlockHead';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { TextField } from '../components/Field';
 import { PageHeader } from '../components/PageHeader';
+import { PanelHead } from '../components/PanelHead';
 import { useToast } from '../components/Toast';
 import { useAlerts, useCare, useCareActions, useTelemetry } from '../data/hooks';
 import { SETTINGS_LIMITS } from '../data/store';
@@ -49,10 +49,10 @@ export function Configuracion() {
 
   return (
     <>
-      <PageHeader title="Configuración" />
+      <PageHeader eyebrow="Administración" title="Configuración" subtitle={<p>Cuándo avisar y cada cuánto actualizar el panel.</p>} />
 
-      <section className="block" aria-labelledby="deteccion">
-        <BlockHead id="deteccion" title="Detección y actualización" />
+      <section className="panel" aria-labelledby="deteccion">
+        <PanelHead id="deteccion" kicker="Alertas" title="Detección y actualización" />
         <form ref={formRef} className="form" noValidate onSubmit={onSubmit} onInput={onInput}>
           <TextField
             label="Minutos sin reporte antes de avisar"
@@ -86,18 +86,18 @@ export function Configuracion() {
             </p>
           ) : null}
           <div className="form-actions">
-            <button type="submit" className="key" disabled={pending}>
+            <button type="submit" className="btn btn--primary" disabled={pending}>
               Guardar ajustes
             </button>
-            <button type="button" className="link-action" onClick={() => void restore()}>
+            <button type="button" className="text-button" onClick={() => void restore()}>
               Restablecer valores
             </button>
           </div>
         </form>
       </section>
 
-      <section className="block" aria-labelledby="origen">
-        <BlockHead id="origen" title="Origen de los datos" />
+      <section className="panel" aria-labelledby="origen">
+        <PanelHead id="origen" kicker="Datos" title="Origen de los datos" />
         <dl className="facts">
           <div className="fact">
             <dt>Lecturas y dispositivos</dt>
@@ -114,8 +114,8 @@ export function Configuracion() {
         </dl>
       </section>
 
-      <section className="block" aria-labelledby="borrar">
-        <BlockHead id="borrar" title="Datos locales" />
+      <section className="panel" aria-labelledby="borrar">
+        <PanelHead id="borrar" kicker="Este navegador" title="Datos locales" />
         <div className="danger-zone">
           <p>
             {demo
@@ -123,7 +123,7 @@ export function Configuracion() {
               : 'Borra de este navegador las personas, los contactos, las notas, el estado de las alertas y los ajustes.'}{' '}
             No borra nada del servidor ni de otros navegadores.
           </p>
-          <button type="button" className="key key--danger" onClick={() => setConfirming(true)}>
+          <button type="button" className="btn btn--danger" onClick={() => setConfirming(true)}>
             Borrar datos locales
           </button>
         </div>

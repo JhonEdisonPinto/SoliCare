@@ -1,11 +1,12 @@
+import { AlertTriangle, ChevronLeft, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AlertItem } from '../components/AlertItem';
-import { BlockHead } from '../components/BlockHead';
 import { SelectField } from '../components/Field';
 import { PageHeader } from '../components/PageHeader';
-import { Stamp } from '../components/Stamp';
-import { StatusMarkFor } from '../components/StatusMark';
+import { PanelHead } from '../components/PanelHead';
+import { Pill } from '../components/Pill';
+import { StatusPillFor } from '../components/StatusPill';
 import { useToast } from '../components/Toast';
 import { VitalReadout } from '../components/VitalReadout';
 import { VitalsPanel } from '../components/VitalsPanel';
@@ -32,8 +33,8 @@ function PersonAssignment({ deviceId, owner }: { deviceId: string; owner: Person
 
   if (people.length === 0) {
     return (
-      <p className="empty-row">
-        Todavía no hay personas en el panel. <Link to="/personas">Agregue una persona</Link> para asignarle este dispositivo.
+      <p className="panel-empty">
+        Todavía no hay personas en el panel. <Link to="/personas">Añade una persona</Link> para asignarle este dispositivo.
       </p>
     );
   }
@@ -45,7 +46,7 @@ function PersonAssignment({ deviceId, owner }: { deviceId: string; owner: Person
         key={owner?.id ?? 'none'}
         defaultValue={owner?.id ?? ''}
         error={errors.personId ?? errors.deviceId}
-        hint="Solo aparecen personas que todavía no tienen un dispositivo. Para cambiar el de otra persona, hágalo desde su detalle."
+        hint="Solo aparecen personas que todavía no tienen un dispositivo. Para cambiar el de otra persona, hazlo desde su detalle."
       >
         <option value="">Sin persona asignada</option>
         {options.map((person) => (
@@ -61,7 +62,7 @@ function PersonAssignment({ deviceId, owner }: { deviceId: string; owner: Person
         </p>
       ) : null}
       <div className="form-actions">
-        <button type="submit" className="key" disabled={pending}>
+        <button type="submit" className="btn btn--primary" disabled={pending}>
           Guardar asignación
         </button>
       </div>
@@ -73,15 +74,23 @@ function PersonAssignment({ deviceId, owner }: { deviceId: string; owner: Person
 function HistoryFall({ reading, now }: { reading: Reading; now: number }) {
   return (
     <li className="event event--caida event--resuelta">
-      <span className="event-stamp">
-        <Stamp kind="caida-atendida">Caída</Stamp>
+      <span className="event-icon" aria-hidden="true">
+        <AlertTriangle size={18} />
       </span>
-      <time className="event-time" dateTime={reading.received_at} title={formatFull(reading.received_at)}>
-        {formatWhen(reading.received_at, now)}
-      </time>
-      <span className="event-age">{timeAgo(reading.received_at, now)}</span>
-      <div className="event-detail">
-        <p>Lectura de caída anterior al registro de alertas de este navegador: no tiene estado de atención.</p>
+      <div className="event-main">
+        <div className="event-head">
+          <strong className="event-title">Caída</strong>
+          <Pill tone="neutral">Sin estado</Pill>
+        </div>
+        <p className="event-time">
+          <time dateTime={reading.received_at} title={formatFull(reading.received_at)}>
+            {formatWhen(reading.received_at, now)}
+          </time>{' '}
+          <span className="event-age">({timeAgo(reading.received_at, now)})</span>
+        </p>
+        <div className="event-detail">
+          <p>Lectura de caída anterior al registro de alertas de este navegador: no tiene estado de atención.</p>
+        </div>
       </div>
     </li>
   );
@@ -147,11 +156,13 @@ export function DispositivoDetail() {
   if (!row) {
     return (
       <>
-        <p className="crumb">
-          <Link to="/dispositivos">Todos los dispositivos</Link>
+        <p className="back-link">
+          <Link to="/dispositivos">
+            <ChevronLeft size={15} aria-hidden="true" /> Todos los dispositivos
+          </Link>
         </p>
         <PageHeader title={`Dispositivo ${deviceId}`} />
-        <p className="empty-row">
+        <p className="panel panel-empty">
           {known
             ? 'El servidor no conoce este dispositivo y ninguna persona lo tiene asignado. '
             : 'Esperando datos del servidor para comprobar este dispositivo. '}
@@ -172,24 +183,24 @@ export function DispositivoDetail() {
 
   return (
     <>
-      <p className="crumb">
-        <Link to="/dispositivos">Todos los dispositivos</Link>
+      <p className="back-link">
+        <Link to="/dispositivos">
+          <ChevronLeft size={15} aria-hidden="true" /> Todos los dispositivos
+        </Link>
       </p>
-      <PageHeader title={`Dispositivo ${row.id}`}>
-        <div className="status-line-end">
-          <button type="button" className="key key--small" onClick={history.refresh}>
-            Actualizar
-          </button>
-        </div>
+      <PageHeader eyebrow="Dispositivo" title={`Dispositivo ${row.id}`}>
+        <button type="button" className="btn btn--outline" onClick={history.refresh}>
+          <RefreshCw size={16} aria-hidden="true" /> Actualizar
+        </button>
       </PageHeader>
 
-      <section className="block" aria-labelledby="estado">
-        <BlockHead id="estado" title="Estado y asignación" />
+      <section className="panel" aria-labelledby="estado">
+        <PanelHead id="estado" title="Estado y asignación" kicker="Dispositivo" />
         <dl className="facts">
           <div className="fact">
             <dt>Estado</dt>
             <dd>
-              <StatusMarkFor status={row.status} lastSeenAt={device?.last_seen_at} known={known} now={now} />
+              <StatusPillFor status={row.status} lastSeenAt={device?.last_seen_at} known={known} now={now} />
             </dd>
           </div>
           <div className="fact">
@@ -200,7 +211,7 @@ export function DispositivoDetail() {
                   {formatWhen(device.last_seen_at, clock)} ({timeAgo(device.last_seen_at, now)})
                 </time>
               ) : (
-                <span className="muted">El servidor no ha recibido reportes de este dispositivo. Revise que esté encendido y conectado a internet.</span>
+                <span className="muted">El servidor no ha recibido reportes de este dispositivo. Revisa que esté encendido y conectado a internet.</span>
               )}
             </dd>
           </div>
@@ -212,24 +223,28 @@ export function DispositivoDetail() {
         <PersonAssignment deviceId={row.id} owner={person} />
       </section>
 
-      <section className="block" aria-labelledby="senales">
-        <BlockHead id="senales" title="Pulso y SpO2" />
+      <section className="panel" aria-labelledby="senales">
+        <PanelHead id="senales" title="Pulso y SpO2" kicker="Seguimiento" />
         <VitalsPanel history={history} limit={limit} onLimitChange={setLimit} />
       </section>
 
-      <section className="block" aria-labelledby="lecturas">
-        <BlockHead id="lecturas" title="Lecturas recientes" count={history.readings.length > 0 ? Math.min(RECENT, history.readings.length) : undefined}>
-          Una lectura sin valor válido se muestra como «Sin lectura válida», nunca como 0.
-        </BlockHead>
+      <section className="panel" aria-labelledby="lecturas">
+        <PanelHead
+          id="lecturas"
+          title="Lecturas recientes"
+          kicker="Seguimiento"
+          count={history.readings.length > 0 ? Math.min(RECENT, history.readings.length) : undefined}
+          note="Una lectura sin valor válido se muestra como «Sin lectura válida», nunca como 0."
+        />
         {history.readings.length > 0 ? (
           <RecentReadings readings={history.readings} />
         ) : (
-          <p className="empty-row">{history.status === 'loading' ? 'Cargando lecturas…' : 'No hay lecturas para mostrar.'}</p>
+          <p className="panel-empty">{history.status === 'loading' ? 'Cargando lecturas…' : 'No hay lecturas para mostrar.'}</p>
         )}
       </section>
 
-      <section className="block" aria-labelledby="caidas">
-        <BlockHead id="caidas" title="Caídas detectadas" count={fallCount} />
+      <section className="panel" aria-labelledby="caidas">
+        <PanelHead id="caidas" title="Caídas detectadas" kicker="Seguridad" count={fallCount} />
         {fallCount > 0 ? (
           <ul className="event-log">
             {falls.map((alert) => (
@@ -240,7 +255,7 @@ export function DispositivoDetail() {
             ))}
           </ul>
         ) : (
-          <p className="empty-row">Este dispositivo no ha registrado caídas.</p>
+          <p className="panel-empty">Este dispositivo no ha registrado caídas.</p>
         )}
       </section>
     </>

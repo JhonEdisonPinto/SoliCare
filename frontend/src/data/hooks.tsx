@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { TelemetrySource } from './api';
 import { ApiError } from './api';
 import type { CareRepository } from './store';
-import type { Alert, CareData, Device, Reading } from './types';
+import type { Alert, CareData, Device, DeviceStats, Reading } from './types';
 import { alertReferenceTime, deriveAlerts, isOpen } from './alerts';
 import { summarizeDevices, summarizePeople, unassignedDevices, type DeviceSummary, type PersonSummary } from './summary';
 import { usePolling } from './polling';
@@ -241,4 +241,44 @@ export function useDeviceHistory(deviceId: string | null | undefined, limit: num
   }, [load, refresh]);
 
   return { ...state, refresh };
+}
+
+export type DeviceStatsState = { status: 'loading' | 'ready' | 'unavailable'; stats: DeviceStats | null };
+
+/**
+ * Counters for one device (falls this month, last fall), polled on the same interval. When the request
+ * fails (for example a deployment without the stats route) the state is `unavailable` and views show
+ * "Sin datos"; it never throws into the page.
+ */
+export function useDeviceStats(deviceId: string | null | undefined): DeviceStatsState {
+  const { source } = useTelemetry();
+  const { settings } = useCare();
+  const [state, setState] = useState<DeviceStatsState>({ status: 'loading', stats: null });
+
+  useEffect(() => {
+    setState({ status: 'loading', stats: null });
+  }, [deviceId, source]);
+
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      if (!deviceId) return;
+      try {
+        const stats = await source.getDeviceStats(deviceId, signal);
+        if (!signal.aborted) setState({ status: 'ready', stats });
+      } catch {
+        if (!signal.aborted) setState((previous) => ({ status: 'unavailable', stats: previous.stats }));
+      }
+    },
+    [source, deviceId],
+  );
+
+  const refresh = usePolling(load, settings.pollIntervalSeconds * 1000);
+  const previousLoad = useRef(load);
+  useEffect(() => {
+    if (previousLoad.current === load) return;
+    previousLoad.current = load;
+    if (!document.hidden) refresh();
+  }, [load, refresh]);
+
+  return state;
 }

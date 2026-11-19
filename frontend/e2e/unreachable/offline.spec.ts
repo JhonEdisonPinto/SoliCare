@@ -8,7 +8,7 @@ test.use({ allowedConsoleErrors: /Failed to load resource|ERR_CONNECTION_REFUSED
 
 test('Resumen says the server is unreachable and shows no demo data', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1, name: 'Resumen' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Jhon/ })).toBeVisible();
   await expect(page.getByRole('alert').getByRole('heading', { name: 'No se pudo conectar con el servidor' })).toBeVisible();
   await expect(page.getByText('Sin conexión').first()).toBeVisible();
   await expect(page.getByText('Modo demostración')).toHaveCount(0);

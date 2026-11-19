@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { env } from './config/env.js';
 import { checkDatabase, initializeDatabase } from './db/database.js';
+import { registerStatsRoutes } from './routes/stats.js';
 import { registerTelemetryRoutes } from './routes/telemetry.js';
 
 const app = Fastify({ logger: true });
@@ -18,6 +19,7 @@ app.get('/health', async (_request, reply) => {
 });
 
 await registerTelemetryRoutes(app);
+await registerStatsRoutes(app);
 await initializeDatabase();
 
 try {

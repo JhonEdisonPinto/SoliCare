@@ -121,3 +121,40 @@ export async function listTelemetry(deviceId: string, limit: number): Promise<Te
   );
   return result.rows.reverse();
 }
+
+export type DeviceStats = {
+  device_id: string;
+  falls_this_month: number;
+  readings_24h: number;
+  last_fall_at: string | null;
+};
+
+/**
+ * Counters for one device, read-only. "This month" is the current calendar month in UTC (from the 1st at
+ * 00:00 UTC); "24 h" is the 24 hours before the request. `readings_24h` counts every telemetry row of
+ * the window, falls included. A device with no rows gets zeros and a null last fall.
+ */
+export async function getDeviceStats(deviceId: string, now: Date = new Date()): Promise<DeviceStats> {
+  if (!pool) {
+    throw new Error('DATABASE_URL is not configured');
+  }
+
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const dayStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const result = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE type = 'caida' AND received_at >= $2)::int AS falls_this_month,
+       COUNT(*) FILTER (WHERE received_at >= $3)::int AS readings_24h,
+       MAX(received_at) FILTER (WHERE type = 'caida') AS last_fall_at
+     FROM telemetry
+     WHERE device_id = $1`,
+    [deviceId, monthStart, dayStart],
+  );
+  const row = result.rows[0];
+  return {
+    device_id: deviceId,
+    falls_this_month: row.falls_this_month,
+    readings_24h: row.readings_24h,
+    last_fall_at: row.last_fall_at ? new Date(row.last_fall_at).toISOString() : null,
+  };
+}

@@ -5,8 +5,8 @@ export function NotFound() {
   return (
     <>
       <PageHeader title="Página no encontrada" />
-      <p className="empty-row">
-        La dirección que abrió no corresponde a ninguna vista del panel. <Link to="/">Ir al resumen</Link>
+      <p className="panel panel-empty">
+        La dirección que abriste no corresponde a ninguna vista del panel. <Link to="/">Ir al resumen</Link>
       </p>
     </>
   );

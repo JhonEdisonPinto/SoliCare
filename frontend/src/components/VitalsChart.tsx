@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Reading } from '../data/types';
-import { buildSeries, nearestIndex, type SeriesModel } from '../lib/chart';
-import { formatClockSeconds, formatDuration, formatWhen, timeAgo, toMs } from '../lib/time';
+import { buildSeries, nearestIndex, summaryOf, type SeriesModel } from '../lib/chart';
+import { formatClockSeconds, formatDuration, formatWhen, toMs } from '../lib/time';
 import { VITAL_LABEL, VITAL_UNIT, validVital, type VitalKey } from '../lib/vitals';
 
-const HEIGHT = 150;
-const MARGIN = { top: 10, right: 40, bottom: 4, left: 40 };
+export const HEIGHT = 150;
+export const MARGIN = { top: 10, right: 40, bottom: 4, left: 40 };
 const AXIS_HEIGHT = 22;
 
-function useWidth() {
+export function useWidth() {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   useEffect(() => {
@@ -21,9 +21,9 @@ function useWidth() {
   return [ref, width] as const;
 }
 
-type Falls = { x: number; at: string }[];
+export type Falls = { x: number; at: string }[];
 
-function Metric({
+export function ChartMetric({
   model,
   falls,
   width,
@@ -65,6 +65,9 @@ function Metric({
             <line className="chart-fall" x1={fall.x} x2={fall.x} y1={0} y2={plotH} />
           </g>
         ))}
+        {model.areas.map((d) => (
+          <path key={d} className="chart-area" d={d} />
+        ))}
         {model.paths.map((d) => (
           <path key={d} className="chart-line" d={d} />
         ))}
@@ -99,19 +102,6 @@ function Metric({
       </g>
     </svg>
   );
-}
-
-function summaryOf(vital: VitalKey, model: SeriesModel | null, now: number): string {
-  if (!model) return `${VITAL_LABEL[vital]}: ninguna de las lecturas de este período tiene un valor válido.`;
-  const unit = VITAL_UNIT[vital];
-  const parts = [
-    `${model.validCount} ${model.validCount === 1 ? 'lectura válida' : 'lecturas válidas'}, entre ${model.min} y ${model.max} ${unit}.`,
-  ];
-  if (model.last) parts.push(`Último valor válido: ${model.last.value} ${unit}, ${timeAgo(model.last.at, now)}.`);
-  if (model.invalidCount > 0) {
-    parts.push(`${model.invalidCount} ${model.invalidCount === 1 ? 'lectura sin valor válido no se dibuja' : 'lecturas sin valor válido no se dibujan'}.`);
-  }
-  return parts.join(' ');
 }
 
 /**
@@ -191,7 +181,7 @@ export function VitalsChart({ readings, now }: { readings: readonly Reading[]; n
         className="chart-plots"
         tabIndex={0}
         role="group"
-        aria-label="Gráficos de pulso y SpO2. Use las flechas izquierda y derecha para revisar cada lectura."
+        aria-label="Gráficos de pulso y SpO2. Usa las flechas izquierda y derecha para revisar cada lectura."
         onPointerMove={fromPointer}
         onPointerLeave={() => setCursorIndex(null)}
         onKeyDown={onKeyDown}
@@ -204,7 +194,7 @@ export function VitalsChart({ readings, now }: { readings: readonly Reading[]; n
               {VITAL_LABEL[vital]} <span className="chart-unit">{VITAL_UNIT[vital]}</span>
             </figcaption>
             {series ? (
-              <Metric
+              <ChartMetric
                 model={series}
                 falls={falls}
                 width={width}
@@ -233,7 +223,7 @@ export function VitalsChart({ readings, now }: { readings: readonly Reading[]; n
             })}
           </>
         ) : (
-          'Pase el cursor sobre los gráficos, o enfóquelos y use las flechas, para ver cada lectura.'
+          'Pasa el cursor sobre los gráficos, o enfócalos y usa las flechas, para ver cada lectura.'
         )}
       </p>
       <p className="chart-note">

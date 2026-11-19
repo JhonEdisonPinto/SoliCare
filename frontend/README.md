@@ -1,9 +1,11 @@
 # Frontend
 
 Panel web de SoliCare construido con React, Vite y TypeScript.
-La interfaz está pensada para escritorio, tablet y celular (desde 360 px, sin
-desplazamiento horizontal), con una barra de pestañas de texto que se reparte en
-dos filas en pantallas pequeñas.
+La interfaz sigue el diseño original de SoliCare: barra lateral, barra superior,
+tarjetas blancas sobre fondo claro, paleta verde, DM Sans y Manrope (incluidas
+con el paquete, sin pedirlas a un servicio externo) e iconos de `lucide-react`.
+Está pensada para escritorio, tablet y celular (desde 360 px, sin desplazamiento
+horizontal); en pantallas estrechas la barra lateral es un menú desplegable.
 
 Panel web para familiares, cuidadores y personal de la central de control.
 
@@ -11,7 +13,7 @@ Panel web para familiares, cuidadores y personal de la central de control.
 
 | Ruta | Qué muestra |
 | --- | --- |
-| `/` | Resumen: eventos abiertos, personas ordenadas por urgencia y dispositivos sin persona asignada. |
+| `/` | Resumen: saludo, aviso de la alerta abierta más urgente, cuatro indicadores, signos vitales con gráfico, red de personas, detección de caídas, actividad reciente y dispositivos sin persona asignada. Todo sale de datos reales; lo que no existe dice "Sin datos". |
 | `/personas` | Tabla de personas con estado, dispositivo, últimas lecturas válidas y alertas abiertas. Permite agregar personas. |
 | `/personas/:personId` | Detalle: datos de la persona (editar y eliminar), dispositivo asignado (asignar, cambiar o quitar), historial de pulso y SpO2, contactos de emergencia ("Contactos que serán notificados") e historial de alertas. |
 | `/dispositivos` | Todos los dispositivos que conoce el servidor más los asignados que todavía no han reportado. |
@@ -36,6 +38,9 @@ Los datos del panel vienen de dos lugares.
 - `GET /api/v1/devices`: dispositivos, último reporte y últimos valores.
 - `GET /api/v1/devices/:id/telemetry?limit=N`: lecturas de un dispositivo
   (el servidor permite hasta 500 por petición).
+- `GET /api/v1/devices/:id/stats`: caídas del mes en curso (UTC), lecturas de
+  las últimas 24 h y última caída; el movimiento llega como `null`. Si la
+  petición falla, el panel muestra "Sin datos".
 
 De ahí salen el estado de cada dispositivo (en línea, sin reporte reciente, sin
 datos todavía), las lecturas y las caídas. El panel consulta al servidor cada

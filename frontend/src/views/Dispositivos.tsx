@@ -1,8 +1,9 @@
+import { RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { BlockHead } from '../components/BlockHead';
 import { PageHeader } from '../components/PageHeader';
+import { PanelHead } from '../components/PanelHead';
 import { ReadingAge } from '../components/ReadingAge';
-import { StatusMarkFor } from '../components/StatusMark';
+import { StatusPillFor } from '../components/StatusPill';
 import { VitalReadout } from '../components/VitalReadout';
 import { useDeviceSummaries, useReferenceNow, useTelemetry } from '../data/hooks';
 import type { DeviceSummary } from '../data/summary';
@@ -19,8 +20,8 @@ function Row({ row, now, known }: { row: DeviceSummary; now: number; known: bool
           {row.id}
         </Link>
       </th>
-      <td className="cell-status">
-        <StatusMarkFor status={row.status} lastSeenAt={device?.last_seen_at} known={known} now={now} />
+      <td className="cell-status" data-label="Estado">
+        <StatusPillFor status={row.status} lastSeenAt={device?.last_seen_at} known={known} now={now} pendingFall={pendingFall} />
       </td>
       <td className="cell-last" data-label="Último reporte">
         {device ? (
@@ -73,57 +74,57 @@ export function Dispositivos() {
 
   return (
     <>
-      <PageHeader title="Dispositivos">
-        <p className="updated">
-          {known || rows.length > 0 ? (
-            <>
-              {rows.length} {rows.length === 1 ? 'dispositivo' : 'dispositivos'}
-              {rows.length > 0 ? `, ${unassigned} sin persona asignada` : ''}
-            </>
-          ) : telemetry.status === 'loading' ? (
-            'Cargando dispositivos…'
-          ) : (
-            'Sin datos de dispositivos'
-          )}
-        </p>
-        <div className="status-line-end">
-          <button type="button" className="key key--small" onClick={telemetry.refresh}>
-            Actualizar
-          </button>
-        </div>
+      <PageHeader
+        eyebrow="Tu red"
+        title="Dispositivos"
+        subtitle={
+          <p>
+            {known || rows.length > 0
+              ? `${rows.length} ${rows.length === 1 ? 'dispositivo' : 'dispositivos'}${rows.length > 0 ? `, ${unassigned} sin persona asignada` : ''}`
+              : telemetry.status === 'loading'
+                ? 'Cargando dispositivos…'
+                : 'Sin datos de dispositivos'}
+          </p>
+        }
+      >
+        <button type="button" className="btn btn--outline" onClick={telemetry.refresh}>
+          <RefreshCw size={16} aria-hidden="true" /> Actualizar
+        </button>
       </PageHeader>
 
       {telemetry.status === 'unreachable' ? (
-        <div className="system-row system-row--problem" role="alert">
-          <div className="system-body">
-            <h2 className="system-title">No se pudo conectar con el servidor</h2>
+        <div className="notice notice--problem" role="alert">
+          <div className="notice-body">
+            <h2 className="notice-title">No se pudo conectar con el servidor</h2>
             <p>
               {telemetry.error}{' '}
               {telemetry.lastSuccessAt
-                ? `Lo que ve abajo es lo último que se cargó (${timeAgo(new Date(telemetry.lastSuccessAt).toISOString(), Date.now())}).`
+                ? `Lo que ves abajo es lo último que se cargó (${timeAgo(new Date(telemetry.lastSuccessAt).toISOString(), Date.now())}).`
                 : 'Todavía no hay datos para mostrar.'}
             </p>
           </div>
-          <div className="system-action">
-            <button type="button" className="key" onClick={telemetry.refresh}>
-              Reintentar ahora
-            </button>
-          </div>
+          <button type="button" className="btn btn--outline" onClick={telemetry.refresh}>
+            Reintentar ahora
+          </button>
         </div>
       ) : null}
 
-      <section className="block" aria-labelledby="lista">
-        <BlockHead id="lista" title="Dispositivos" count={known ? rows.length : undefined}>
-          Los que reportan al servidor y los asignados a una persona que todavía no han reportado.
-        </BlockHead>
+      <section className="panel" aria-labelledby="lista">
+        <PanelHead
+          id="lista"
+          kicker="Tu red"
+          title="Dispositivos"
+          count={known ? rows.length : undefined}
+          note="Los que reportan al servidor y los asignados a una persona que todavía no han reportado."
+        />
         {telemetry.status === 'loading' && rows.length === 0 ? (
-          <p className="empty-row" role="status">
+          <p className="panel-empty" role="status">
             Cargando datos del servidor…
           </p>
         ) : rows.length === 0 && !known ? (
-          <p className="empty-row">Sin conexión con el servidor no se puede saber qué dispositivos hay. Se volverá a intentar solo.</p>
+          <p className="panel-empty">Sin conexión con el servidor no se puede saber qué dispositivos hay. Se volverá a intentar solo.</p>
         ) : rows.length === 0 ? (
-          <p className="empty-row">Ningún dispositivo ha reportado todavía. Cuando uno envíe su primer reporte aparecerá aquí, y podrá asignarlo a una persona.</p>
+          <p className="panel-empty">Ningún dispositivo ha reportado todavía. Cuando uno envíe su primer reporte aparecerá aquí, y podrás asignarlo a una persona.</p>
         ) : (
           <div className="table-wrap">
             <table className="data-table devices-table">

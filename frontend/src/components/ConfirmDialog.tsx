@@ -47,10 +47,10 @@ export function ConfirmDialog({ open, title, confirmLabel, children, onConfirm, 
       </h2>
       <div className="confirm-body">{children}</div>
       <div className="confirm-actions">
-        <button ref={cancelRef} type="button" className="key" onClick={() => ref.current?.close()}>
+        <button ref={cancelRef} type="button" className="btn btn--outline" onClick={() => ref.current?.close()}>
           Cancelar
         </button>
-        <button type="button" className="key key--danger" disabled={busy} onClick={() => void confirm()}>
+        <button type="button" className="btn btn--danger" disabled={busy} onClick={() => void confirm()}>
           {confirmLabel}
         </button>
       </div>

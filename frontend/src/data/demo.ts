@@ -4,7 +4,7 @@
  */
 import type { TelemetrySource } from './api';
 import { API_MAX_LIMIT } from './api';
-import type { CareData, Device, Reading } from './types';
+import type { CareData, Device, DeviceStats, Reading } from './types';
 import { DEFAULT_SETTINGS } from './types';
 
 const SLOT_MS = 30_000;
@@ -106,6 +106,27 @@ function history(device: DemoDevice, now: number, limit: number): Reading[] {
   return out.sort((a, b) => a.received_at.localeCompare(b.received_at)).slice(-limit);
 }
 
+/** Counters computed from the simulated timeline, with the same month rule as the API (UTC calendar month). */
+function statsOf(device: DemoDevice, now: number): DeviceStats {
+  const date = new Date(now);
+  const monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+  const falls = device.falls.map((offset) => sessionStart + offset).filter((t) => t <= now);
+  let readings = falls.filter((t) => t >= now - 24 * 60 * MIN).length;
+  for (let slot = Math.floor((now - 24 * 60 * MIN) / SLOT_MS); slot * SLOT_MS + device.phaseMs <= now; slot += 1) {
+    const t = slot * SLOT_MS + device.phaseMs;
+    if (t >= now - 24 * 60 * MIN && isReporting(device, t)) readings += 1;
+  }
+  const lastFall = falls.length > 0 ? Math.max(...falls) : null;
+  return {
+    device_id: device.id,
+    falls_this_month: falls.filter((t) => t >= monthStart).length,
+    readings_24h: readings,
+    last_fall_at: lastFall === null ? null : new Date(lastFall).toISOString(),
+    last_movement_at: null,
+    activity: null,
+  };
+}
+
 const wait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
@@ -131,6 +152,13 @@ export const demoSource: TelemetrySource = {
     await wait(150, signal);
     const device = DEVICES.find((item) => item.id === deviceId);
     return device ? history(device, Date.now(), Math.min(Math.max(limit, 1), API_MAX_LIMIT)) : [];
+  },
+  async getDeviceStats(deviceId, signal) {
+    await wait(100, signal);
+    const device = DEVICES.find((item) => item.id === deviceId);
+    return device
+      ? statsOf(device, Date.now())
+      : { device_id: deviceId, falls_this_month: 0, readings_24h: 0, last_fall_at: null, last_movement_at: null, activity: null };
   },
 };
 

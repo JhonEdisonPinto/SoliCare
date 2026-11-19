@@ -1,12 +1,14 @@
 import type { Reading } from '../data/types';
-import { validVital, type VitalKey } from './vitals';
-import { toMs } from './time';
+import { VITAL_LABEL, VITAL_UNIT, validVital, type VitalKey } from './vitals';
+import { timeAgo, toMs } from './time';
 
 export type Point = { x: number; y: number; at: string; value: number };
 
 export type SeriesModel = {
   /** Polyline paths, one per unbroken stretch of valid readings. */
   paths: string[];
+  /** The same stretches closed down to the baseline, for an area fill. */
+  areas: string[];
   /** Stretches with a single valid reading (a line needs two points). */
   dots: Point[];
   ticks: { value: number; y: number }[];
@@ -91,14 +93,20 @@ export function buildSeries(
 
   const round = (n: number) => Math.round(n * 10) / 10;
   const paths: string[] = [];
+  const areas: string[] = [];
   const dots: Point[] = [];
   for (const stretch of stretches) {
     if (stretch.length === 1) dots.push(stretch[0]);
-    else paths.push(stretch.map((p, i) => `${i === 0 ? 'M' : 'L'}${round(p.x)} ${round(p.y)}`).join(' '));
+    else {
+      const line = stretch.map((p, i) => `${i === 0 ? 'M' : 'L'}${round(p.x)} ${round(p.y)}`).join(' ');
+      paths.push(line);
+      areas.push(`${line} L${round(stretch[stretch.length - 1].x)} ${round(box.height)} L${round(stretch[0].x)} ${round(box.height)} Z`);
+    }
   }
 
   return {
     paths,
+    areas,
     dots,
     ticks: ticks.map((value) => ({ value, y: yOf(value) })),
     points,
@@ -121,4 +129,18 @@ export function nearestIndex(times: readonly number[], t: number): number {
   }
   if (lo > 0 && Math.abs(times[lo - 1] - t) <= Math.abs(times[lo] - t)) return lo - 1;
   return lo;
+}
+
+/** The text alternative of a chart: how many valid readings, their range, the latest one and what is not drawn. */
+export function summaryOf(vital: VitalKey, model: SeriesModel | null, now: number): string {
+  if (!model) return `${VITAL_LABEL[vital]}: ninguna de las lecturas de este período tiene un valor válido.`;
+  const unit = VITAL_UNIT[vital];
+  const parts = [
+    `${model.validCount} ${model.validCount === 1 ? 'lectura válida' : 'lecturas válidas'}, entre ${model.min} y ${model.max} ${unit}.`,
+  ];
+  if (model.last) parts.push(`Último valor válido: ${model.last.value} ${unit}, ${timeAgo(model.last.at, now)}.`);
+  if (model.invalidCount > 0) {
+    parts.push(`${model.invalidCount} ${model.invalidCount === 1 ? 'lectura sin valor válido no se dibuja' : 'lecturas sin valor válido no se dibujan'}.`);
+  }
+  return parts.join(' ');
 }

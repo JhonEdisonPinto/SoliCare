@@ -19,6 +19,17 @@ export type Reading = {
   received_at: string;
 };
 
+/** Counters from `GET /api/v1/devices/:deviceId/stats`. Motion fields are null until the firmware reports motion. */
+export type DeviceStats = {
+  device_id: string;
+  /** Falls received since the 1st of the current month, UTC. */
+  falls_this_month: number;
+  readings_24h: number;
+  last_fall_at: string | null;
+  last_movement_at: string | null;
+  activity: null;
+};
+
 /** Entities the backend does not have yet. They live in the local store. */
 export type EmergencyContact = {
   id: string;

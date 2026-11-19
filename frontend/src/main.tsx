@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
-import '@fontsource-variable/atkinson-hyperlegible-next';
+import '@fontsource-variable/dm-sans';
+import '@fontsource-variable/manrope';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/views.css';

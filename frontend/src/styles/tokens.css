@@ -1,65 +1,183 @@
-/* Design tokens. Direction and contrast figures: .workflow design-research section 7 ("central console"). Light theme only. */
+/*
+ * Design tokens and base rules. The look follows the original SoliCare dashboard (soft white cards on a
+ * light page, green brand, DM Sans for text and Manrope for headings). The original grays were too light
+ * for WCAG AA, so every text color below is darkened until it reaches at least 4.5:1 on white and on the
+ * tinted surfaces it is used on (ink 12:1, ink-2 7.3:1, muted 4.9:1, brand-ink 5.3:1).
+ */
 :root {
   color-scheme: light;
 
-  /* Planes and ink */
-  --paper: #ffffff; /* the work surface: one plane, no cards */
-  --chrome: #e8ecef; /* console chrome (tab bar): light steel */
-  --ink: #16242e; /* slate; 15.84:1 on paper, 13.33:1 on chrome */
-  --ink-2: #43535d; /* 7.97:1 on paper */
-  --ink-3: #5a6870; /* 5.76:1 on paper, 4.84:1 on chrome */
-  --rule: #cbd2d6; /* hairline between rows */
-  --rule-strong: var(--ink); /* 2 px rule under headers and the chrome */
-  --noche: #233f66; /* links and focus ring; 9.13:1 on the fall wash */
+  /* Surfaces */
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --line: #e4eaea;
+  --line-soft: #f0f3f2;
 
-  /* Data ink: "the device reported" */
-  --senal: #2f5d8a; /* 6.88:1 on paper */
-  --baseline: #7a868d; /* empty stretch of a report bar, 3.74:1 */
+  /* Ink */
+  --ink: #23322f;
+  --ink-2: #41514d;
+  --muted: #5b6b67;
 
-  /* Reserved status set: state only, always with text and a distinct shape */
-  --caida: #a3241a; /* white on it 7.43:1 */
-  --caida-wash: #fbeae7; /* background of an open fall row; ink 13.59:1, caida text 6.38:1 */
-  --sin-reporte-mark: #b86e00; /* stamp border, 3.99:1 (UI) */
-  --sin-reporte-text: #8a4b00; /* 6.80:1 on paper */
-  --en-linea: #1d7a46; /* 5.35:1 */
-  --sin-datos: #66727a; /* 4.94:1 */
+  /* Brand */
+  --brand: #287f70; /* white text on it: 4.8:1 */
+  --brand-dark: #1e6e60;
+  --brand-ink: #1f6e60; /* brand-colored text on white or tints */
+  --brand-mark: #2fb49a;
+  --brand-soft: #eaf7f3;
+  --chart: #36b698;
+  --focus: #0f5c4d;
 
-  /* Type: one family, tabular figures wherever numbers sit in columns */
-  --font: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible', system-ui, sans-serif;
-  --text-sm: 0.9375rem; /* 15 px: secondary cells, stamps */
-  --text-xs: 0.875rem; /* 14 px: smallest (axis labels) */
-  --text-base: 1.0625rem; /* 17 px body */
-  --text-md: 1.25rem;
-  --text-lg: 1.5rem;
-  --weight-body: 400;
-  --weight-label: 650;
-  --weight-strong: 760;
-  --measure: 66ch;
+  /* State: always paired with text, never color alone */
+  --ok: #1d7a63;
+  --ok-bg: #e6f6f0;
+  --warn: #8a5420;
+  --warn-bg: #fff2df;
+  --warn-line: #edcdb4;
+  --warn-card: #fffaf6;
+  --danger: #b3261e;
+  --danger-bg: #fdecea;
+  --danger-line: #efb4ae;
+  --neutral: #55635f;
+  --neutral-bg: #edf1f0;
 
-  /* Spacing (4 px base) */
-  --s-1: 0.25rem;
-  --s-2: 0.5rem;
-  --s-3: 0.75rem;
-  --s-4: 1rem;
-  --s-5: 1.5rem;
-  --s-6: 2rem;
-  --s-7: 3rem;
-  --gutter: 1rem;
-  --content-max: 100rem;
+  /* Tones for icon tiles (decorative) */
+  --tone-purple: #7d68b8;
+  --tone-purple-bg: #f0edfc;
+  --tone-green: #2d9e84;
+  --tone-green-bg: #e2f6f0;
+  --tone-blue: #5b84bd;
+  --tone-blue-bg: #e9f1fb;
+  --tone-amber: #cf8b43;
+  --tone-amber-bg: #fff2df;
+  --tone-coral: #dd6f5f;
+  --tone-coral-bg: #fff0ed;
 
-  /* Geometry: square by default; stamps and keys get a 2 px corner so they read as objects, not boxes */
-  --r-key: 2px;
-  --row-min: 3rem;
+  --font: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+  --font-head: 'Manrope Variable', 'Manrope', 'DM Sans Variable', system-ui, sans-serif;
 
-  /* Elevation: only for floating elements (toast) */
-  --shadow-float: 0 0.5rem 1.5rem rgb(22 36 46 / 0.2);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-card: 0 1px 2px rgb(35 50 47 / 0.04), 0 8px 24px rgb(35 50 47 / 0.04);
+  --shadow-float: 0 12px 32px rgb(35 50 47 / 0.22);
 
-  --focus: 3px solid var(--noche);
-  --target: 2.75rem; /* 44 px primary targets */
+  --sidebar-w: 252px;
+  --gutter: 18px;
 }
 
 @media (min-width: 48rem) {
   :root {
-    --gutter: 1.5rem;
+    --gutter: 44px;
   }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  overflow-x: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-head);
+  color: var(--ink);
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+a {
+  color: var(--brand-ink);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+time,
+.num,
+.stat-value,
+.nav-count {
+  font-variant-numeric: tabular-nums;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: 12px;
+  inset-block-start: 8px;
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  border: 2px solid var(--focus);
+  translate: 0 -200%;
+}
+
+.skip-link:focus-visible {
+  translate: 0 0;
 }

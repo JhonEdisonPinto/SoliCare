@@ -9,7 +9,7 @@ test('acknowledge a fall with a note and keep it after a reload', async ({ page 
   const pending = page.getByRole('button', { name: action('Marcar como atendida') });
   await expect(pending).toBeVisible();
 
-  await page.getByRole('button', { name: action('Agregar nota') }).click();
+  await page.getByRole('button', { name: action('Añadir nota') }).click();
   const note = page.getByLabel('Nota (opcional)');
   await expect(note).toBeFocused();
   await note.fill('Llamé a su hijo Andrés');

@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { expect, test, VIEWPORTS } from '../fixtures';
 
 const ROUTES = [
-  { path: '/', h1: 'Resumen' },
+  { path: '/', h1: /^Buen(os días|as tardes|as noches), Jhon/ },
   { path: '/personas', h1: 'Personas' },
   { path: '/personas/demo-p1', h1: 'Rosa Elena Pérez' },
   { path: '/dispositivos', h1: 'Dispositivos' },
@@ -10,7 +10,7 @@ const ROUTES = [
   { path: '/alertas', h1: 'Alertas' },
   { path: '/configuracion', h1: 'Configuración' },
   { path: '/esta-ruta-no-existe', h1: 'Página no encontrada' },
-] as const;
+] as const satisfies readonly { path: string; h1: string | RegExp }[];
 
 async function expectNoHorizontalScroll(page: Page) {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({

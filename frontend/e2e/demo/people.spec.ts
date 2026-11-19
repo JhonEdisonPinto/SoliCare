@@ -5,8 +5,8 @@ test('add, edit and delete a person, with an inline validation error', async ({ 
   await expect(page.getByRole('link', { name: 'Rosa Elena Pérez' })).toBeVisible();
 
   // Add: an empty name is rejected inline and focus lands on the field.
-  await page.getByRole('button', { name: 'Agregar persona' }).click();
-  const form = page.getByRole('region', { name: 'Agregar persona' });
+  await page.getByRole('button', { name: 'Añadir persona' }).click();
+  const form = page.getByRole('region', { name: 'Añadir persona' });
   await form.getByRole('button', { name: 'Guardar persona' }).click();
   const name = form.getByLabel('Nombre');
   await expect(name).toBeFocused();
@@ -19,7 +19,7 @@ test('add, edit and delete a person, with an inline validation error', async ({ 
   await form.getByLabel('Relación (opcional)').fill('Vecina');
   await form.getByRole('button', { name: 'Guardar persona' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Persona guardada' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Agregar persona' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Añadir persona' })).toBeFocused();
   await expect(page.getByRole('link', { name: 'Ana Prueba' })).toBeVisible();
 
   // It survives a reload (local store).
@@ -72,7 +72,7 @@ test('a deep link to a person survives a reload', async ({ page }) => {
 test('contacts: add with an inline error, edit, and delete keeps focus in the block', async ({ page }) => {
   await page.goto('/personas/demo-p2');
   const block = page.getByRole('region', { name: /Contactos que serán notificados/ });
-  await block.getByRole('button', { name: 'Agregar contacto' }).click();
+  await block.getByRole('button', { name: 'Añadir contacto' }).click();
   await block.getByLabel('Nombre del contacto').fill('Sara');
   await block.getByRole('button', { name: 'Guardar contacto' }).click();
   const phone = block.getByLabel('Teléfono');
@@ -81,13 +81,13 @@ test('contacts: add with an inline error, edit, and delete keeps focus in the bl
   await phone.fill('+57 300 555 0100');
   await block.getByRole('button', { name: 'Guardar contacto' }).click();
   await expect(block.locator('.contact-name', { hasText: 'Sara' })).toBeVisible();
-  await expect(block.getByRole('button', { name: 'Agregar contacto' })).toBeFocused();
+  await expect(block.getByRole('button', { name: 'Añadir contacto' })).toBeFocused();
 
   await block.getByRole('button', { name: /Eliminar\s*a Sara/ }).click();
   const dialog = page.getByRole('dialog', { name: '¿Eliminar a Sara?' });
   await dialog.getByRole('button', { name: 'Eliminar contacto' }).click();
   await expect(block.locator('.contact-name', { hasText: 'Sara' })).toHaveCount(0);
-  await expect(block.getByRole('button', { name: 'Agregar contacto' })).toBeFocused();
+  await expect(block.getByRole('button', { name: 'Añadir contacto' })).toBeFocused();
 });
 
 test('saving "Editar datos" does not undo a device change made in the Dispositivo block (D3)', async ({ page }) => {
@@ -117,9 +117,9 @@ test('reassigning a device from its page moves it in one step and keeps past ale
   await expect
     .poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('solicare.demo.care.v1') ?? '{"journal":{}}').journal).length))
     .toBeGreaterThan(0);
-  await page.getByRole('button', { name: 'Agregar persona' }).click();
-  await page.getByRole('region', { name: 'Agregar persona' }).getByLabel('Nombre').fill('Nueva Persona');
-  await page.getByRole('region', { name: 'Agregar persona' }).getByRole('button', { name: 'Guardar persona' }).click();
+  await page.getByRole('button', { name: 'Añadir persona' }).click();
+  await page.getByRole('region', { name: 'Añadir persona' }).getByLabel('Nombre').fill('Nueva Persona');
+  await page.getByRole('region', { name: 'Añadir persona' }).getByRole('button', { name: 'Guardar persona' }).click();
   await expect(page.getByRole('link', { name: 'Nueva Persona' })).toBeVisible();
 
   // demo-02 belongs to Rosa and has a pending fall.

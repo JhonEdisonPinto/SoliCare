@@ -1,14 +1,16 @@
+import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BlockHead } from '../components/BlockHead';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import { PanelHead } from '../components/PanelHead';
 import { PersonForm } from '../components/PersonForm';
 import { ReadingAge } from '../components/ReadingAge';
-import { StatusMarkFor } from '../components/StatusMark';
+import { StatusPillFor } from '../components/StatusPill';
 import { VitalReadout } from '../components/VitalReadout';
 import { useReferenceNow, usePeopleSummary, useTelemetry } from '../data/hooks';
 import type { PersonSummary } from '../data/summary';
 import type { Alert } from '../data/types';
+import { avatarTone, initials } from '../lib/people';
 
 function OpenAlerts({ alerts }: { alerts: Alert[] }) {
   const falls = alerts.filter((alert) => alert.kind === 'caida');
@@ -35,13 +37,18 @@ function Row({ row, now, known }: { row: PersonSummary; now: number; known: bool
   return (
     <tr className={pendingFall ? 'row--caida' : undefined}>
       <th scope="row" className="cell-person">
-        <Link className="person-name" to={`/personas/${person.id}`}>
-          {person.name}
-        </Link>
-        {person.relation ? <span className="person-sub">{person.relation}</span> : null}
+        <span className={`person-avatar person-avatar--${avatarTone(person.id)}`} aria-hidden="true">
+          {initials(person.name)}
+        </span>
+        <span className="cell-person-copy">
+          <Link className="person-name" to={`/personas/${person.id}`}>
+            {person.name}
+          </Link>
+          {person.relation ? <span className="person-sub">{person.relation}</span> : null}
+        </span>
       </th>
-      <td className="cell-status">
-        <StatusMarkFor status={status} lastSeenAt={device?.last_seen_at} known={known} now={now} />
+      <td className="cell-status" data-label="Estado">
+        <StatusPillFor status={status} lastSeenAt={device?.last_seen_at} known={known} now={now} pendingFall={pendingFall} />
       </td>
       <td className="cell-device" data-label="Dispositivo">
         {person.deviceId ? <Link to={`/dispositivos/${encodeURIComponent(person.deviceId)}`}>{person.deviceId}</Link> : <span className="muted">Sin dispositivo</span>}
@@ -50,7 +57,7 @@ function Row({ row, now, known }: { row: PersonSummary; now: number; known: bool
         <td colSpan={3} className="row-message">
           {status === 'sin-dispositivo' ? (
             <>
-              Asigne un dispositivo para empezar el seguimiento. <Link to={`/personas/${person.id}`}>Asignar dispositivo</Link>
+              Asigna un dispositivo para empezar el seguimiento. <Link to={`/personas/${person.id}`}>Asignar dispositivo</Link>
             </>
           ) : (
             'Esperando datos del servidor.'
@@ -80,46 +87,60 @@ export function Personas() {
   const summary = usePeopleSummary();
   const telemetry = useTelemetry();
   const now = useReferenceNow();
-  const [adding, setAdding] = useState(false);
+  const [params, setParams] = useSearchParams();
+  // The Resumen buttons "Añadir persona" arrive with ?agregar=1 and open the form straight away.
+  const [adding, setAdding] = useState(params.get('agregar') === '1');
   const trigger = useRef<HTMLButtonElement>(null);
   const wasAdding = useRef(false);
   const known = telemetry.lastSuccessAt !== null;
   const count = summary.people.length;
 
   useEffect(() => {
-    // Closing the form (saved or cancelled) hands focus back to the key that opened it.
+    // Closing the form (saved or cancelled) hands focus back to the button that opened it.
     if (wasAdding.current && !adding) trigger.current?.focus();
     wasAdding.current = adding;
   }, [adding]);
 
+  useEffect(() => {
+    if (params.get('agregar') === '1') {
+      setAdding(true);
+      const next = new URLSearchParams(params);
+      next.delete('agregar');
+      setParams(next, { replace: true });
+    }
+  }, [params, setParams]);
+
   return (
     <>
-      <PageHeader title="Personas">
-        <p className="updated">
-          {count} {count === 1 ? 'persona en seguimiento' : 'personas en seguimiento'}
-        </p>
-        <div className="status-line-end">
-          <button ref={trigger} type="button" className="key" aria-expanded={adding} aria-controls="agregar-persona" onClick={() => setAdding((value) => !value)}>
-            Agregar persona
-          </button>
-        </div>
+      <PageHeader
+        eyebrow="Tu red"
+        title="Personas"
+        subtitle={<p>{count === 1 ? '1 persona en seguimiento' : `${count} personas en seguimiento`}</p>}
+      >
+        <button ref={trigger} type="button" className="btn btn--primary" aria-expanded={adding} aria-controls="agregar-persona" onClick={() => setAdding((value) => !value)}>
+          <Plus size={18} aria-hidden="true" /> Añadir persona
+        </button>
       </PageHeader>
 
       {adding ? (
-        <section className="block" id="agregar-persona" aria-labelledby="agregar-titulo">
-          <BlockHead id="agregar-titulo" title="Agregar persona" />
+        <section className="panel" id="agregar-persona" aria-labelledby="agregar-titulo">
+          <PanelHead id="agregar-titulo" title="Añadir persona" kicker="Nueva persona" />
           <PersonForm onDone={() => setAdding(false)} onCancel={() => setAdding(false)} />
         </section>
       ) : null}
 
-      <section className="block" aria-labelledby="lista">
-        <BlockHead id="lista" title="Personas" count={count}>
-          Ordenadas por urgencia. Pulso y SpO2 (saturación de oxígeno) son señales de seguimiento.
-        </BlockHead>
+      <section className="panel" aria-labelledby="lista">
+        <PanelHead
+          id="lista"
+          kicker="Tu red"
+          title="Personas"
+          count={count}
+          note="Ordenadas por urgencia. Pulso y SpO2 (saturación de oxígeno) son señales de seguimiento, no un diagnóstico."
+        />
         {count === 0 ? (
-          <p className="empty-row">
-            Todavía no hay personas. Agregue a quien quiere acompañar y el dispositivo que usa; desde ese momento verá aquí su estado, sus lecturas y
-            sus alertas.
+          <p className="panel-empty">
+            Todavía no hay personas. Añade a quien quieres acompañar y el dispositivo que usa; desde ese momento verás aquí su estado, sus lecturas y sus
+            alertas.
           </p>
         ) : (
           <div className="table-wrap">

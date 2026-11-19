@@ -28,7 +28,7 @@ export function PersonForm({ person, onDone, onCancel }: { person?: Person; onDo
         name="relation"
         defaultValue={person?.relation}
         error={errors.relation}
-        hint="Cómo se relaciona con usted, por ejemplo Mamá o Abuelo."
+        hint="Cómo se relaciona contigo, por ejemplo Mamá o Abuelo."
         autoComplete="off"
       />
       <SelectField
@@ -58,10 +58,10 @@ export function PersonForm({ person, onDone, onCancel }: { person?: Person; onDo
         </p>
       ) : null}
       <div className="form-actions">
-        <button type="submit" className="key" disabled={pending}>
+        <button type="submit" className="btn btn--primary" disabled={pending}>
           Guardar persona
         </button>
-        <button type="button" className="link-action" onClick={onCancel}>
+        <button type="button" className="text-button" onClick={onCancel}>
           Cancelar
         </button>
       </div>

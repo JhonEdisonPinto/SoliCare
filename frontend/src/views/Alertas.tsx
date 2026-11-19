@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertItem } from '../components/AlertItem';
-import { BlockHead } from '../components/BlockHead';
 import { SelectField } from '../components/Field';
 import { PageHeader } from '../components/PageHeader';
+import { PanelHead } from '../components/PanelHead';
+import { Pill } from '../components/Pill';
 import { useAlerts, useCare, useNow, useTelemetry } from '../data/hooks';
 import type { AlertKind, AlertState } from '../data/types';
 
@@ -53,25 +54,38 @@ export function Alertas() {
 
   return (
     <>
-      <PageHeader title="Alertas">
-        <ul className="tally" aria-label="Conteo de alertas">
-          <li className={`tally-item${counts.pendiente === 0 ? ' tally-item--zero' : pendingFall ? ' tally-item--caida' : ' tally-item--sin-reporte'}`}>
-            <span className="tally-count">{counts.pendiente}</span> {counts.pendiente === 1 ? 'pendiente' : 'pendientes'}
-          </li>
-          <li className={`tally-item${counts.atendida === 0 ? ' tally-item--zero' : ''}`}>
-            <span className="tally-count">{counts.atendida}</span> {counts.atendida === 1 ? 'atendida' : 'atendidas'}
-          </li>
-          <li className={`tally-item${counts.resuelta === 0 ? ' tally-item--zero' : ''}`}>
-            <span className="tally-count">{counts.resuelta}</span> {counts.resuelta === 1 ? 'resuelta' : 'resueltas'}
-          </li>
-        </ul>
-      </PageHeader>
+      <PageHeader
+        eyebrow="Seguridad"
+        title="Alertas"
+        subtitle={
+          <ul className="tally" aria-label="Conteo de alertas">
+            <li>
+              <Pill tone={counts.pendiente === 0 ? 'neutral' : pendingFall ? 'danger' : 'warn'}>
+                <span className="tally-count">{counts.pendiente}</span> {counts.pendiente === 1 ? 'pendiente' : 'pendientes'}
+              </Pill>
+            </li>
+            <li>
+              <Pill tone={counts.atendida === 0 ? 'neutral' : 'info'}>
+                <span className="tally-count">{counts.atendida}</span> {counts.atendida === 1 ? 'atendida' : 'atendidas'}
+              </Pill>
+            </li>
+            <li>
+              <Pill tone="neutral">
+                <span className="tally-count">{counts.resuelta}</span> {counts.resuelta === 1 ? 'resuelta' : 'resueltas'}
+              </Pill>
+            </li>
+          </ul>
+        }
+      />
 
-      <section className="block" aria-labelledby="diario">
-        <BlockHead id="diario" title="Diario de alertas" count={telemetry.lastSuccessAt !== null || alerts.length > 0 ? filtered.length : undefined}>
-          Atendida significa que alguien ya actuó; resuelta, que la situación terminó. Una alerta de conexión se resuelve sola cuando el dispositivo
-          vuelve a reportar.
-        </BlockHead>
+      <section className="panel" aria-labelledby="diario">
+        <PanelHead
+          id="diario"
+          kicker="Historial"
+          title="Diario de alertas"
+          count={telemetry.lastSuccessAt !== null || alerts.length > 0 ? filtered.length : undefined}
+          note="Atendida significa que alguien ya actuó; resuelta, que la situación terminó. Una alerta de conexión se resuelve sola cuando el dispositivo vuelve a reportar."
+        />
 
         <search>
           <form className="filters" onSubmit={(event) => event.preventDefault()}>
@@ -89,7 +103,7 @@ export function Alertas() {
             {filtering ? (
               <button
                 type="button"
-                className="link-action"
+                className="text-button"
                 onClick={() => {
                   setParams(new URLSearchParams(), { replace: true });
                   setShown(PAGE);
@@ -122,7 +136,7 @@ export function Alertas() {
               ))}
             </ul>
           ) : (
-            <p className="empty-row">
+            <p className="panel-empty">
               {alerts.length === 0
                 ? telemetry.lastSuccessAt === null
                   ? 'Sin datos todavía para revisar alertas.'
@@ -133,7 +147,7 @@ export function Alertas() {
         </div>
         {filtered.length > visible.length ? (
           <div className="block-actions">
-            <button type="button" className="key" onClick={() => setShown((value) => value + PAGE)}>
+            <button type="button" className="btn btn--outline" onClick={() => setShown((value) => value + PAGE)}>
               Mostrar más alertas
             </button>
             <span className="muted">
