@@ -115,6 +115,27 @@ sobreviven a una recarga.
 npm install
 npm run dev
 npm run build
+npm run test:e2e
 ```
 
 Para probar sin backend: `VITE_DEMO_MODE=true npm run dev`.
+
+## Pruebas
+
+`npm run test:e2e` ejecuta Playwright (solo Chromium). Tiene tres proyectos:
+
+- `unit`: funciones puras (`deriveAlerts`, `timeAgo`, `deviceStatus`, `validVital`) como pruebas de Node, sin navegador (`e2e/unit/`).
+- `demo`: recorre el panel en modo demostración (`e2e/demo/`): todas las rutas a 1280 px y 375 px sin desplazamiento horizontal ni errores de consola, alta, edición y borrado de personas y contactos, atender una alerta con nota, cambiar un ajuste, recarga de enlaces profundos, teclado y foco, `prefers-reduced-motion` y `axe-core` en cada ruta.
+- `unreachable`: el panel sin modo demostración y sin servidor, para comprobar el estado explícito de "no se pudo conectar" (`e2e/unreachable/`).
+
+La configuración (`playwright.config.ts`) levanta sola dos servidores de Vite, en los puertos 5199 (demostración) y 5198 (sin servidor), y reutiliza uno que ya esté corriendo salvo en CI (`CI=true`).
+
+La primera vez hay que descargar Chromium y tener sus librerías del sistema:
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+`--with-deps` usa `apt` y necesita permisos de administrador. Si no los tiene, instale los paquetes de su distribución (en Debian o Ubuntu, por ejemplo, `libnss3` y `libnspr4`, además de los que pida `npx playwright install-deps chromium --dry-run`) y ejecute solo `npx playwright install chromium`.
+
+Los informes y las trazas quedan en `test-results/` y `playwright-report/`, que Git ignora.

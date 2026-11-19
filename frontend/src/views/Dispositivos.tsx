@@ -75,8 +75,16 @@ export function Dispositivos() {
     <>
       <PageHeader title="Dispositivos">
         <p className="updated">
-          {rows.length} {rows.length === 1 ? 'dispositivo' : 'dispositivos'}
-          {rows.length > 0 ? `, ${unassigned} sin persona asignada` : ''}
+          {known || rows.length > 0 ? (
+            <>
+              {rows.length} {rows.length === 1 ? 'dispositivo' : 'dispositivos'}
+              {rows.length > 0 ? `, ${unassigned} sin persona asignada` : ''}
+            </>
+          ) : telemetry.status === 'loading' ? (
+            'Cargando dispositivos…'
+          ) : (
+            'Sin datos de dispositivos'
+          )}
         </p>
         <div className="status-line-end">
           <button type="button" className="key key--small" onClick={telemetry.refresh}>
@@ -90,8 +98,10 @@ export function Dispositivos() {
           <div className="system-body">
             <h2 className="system-title">No se pudo conectar con el servidor</h2>
             <p>
-              {telemetry.error} Lo que ve abajo es lo último que se cargó
-              {telemetry.lastSuccessAt ? ` (${timeAgo(new Date(telemetry.lastSuccessAt).toISOString(), Date.now())})` : ''}.
+              {telemetry.error}{' '}
+              {telemetry.lastSuccessAt
+                ? `Lo que ve abajo es lo último que se cargó (${timeAgo(new Date(telemetry.lastSuccessAt).toISOString(), Date.now())}).`
+                : 'Todavía no hay datos para mostrar.'}
             </p>
           </div>
           <div className="system-action">
@@ -110,6 +120,8 @@ export function Dispositivos() {
           <p className="empty-row" role="status">
             Cargando datos del servidor…
           </p>
+        ) : rows.length === 0 && !known ? (
+          <p className="empty-row">Sin conexión con el servidor no se puede saber qué dispositivos hay. Se volverá a intentar solo.</p>
         ) : rows.length === 0 ? (
           <p className="empty-row">Ningún dispositivo ha reportado todavía. Cuando uno envíe su primer reporte aparecerá aquí, y podrá asignarlo a una persona.</p>
         ) : (

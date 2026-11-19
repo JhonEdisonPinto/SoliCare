@@ -10,7 +10,7 @@ function SourceStatus() {
   if (source.kind === 'demo') {
     return (
       <span className="source">
-        <Stamp kind="demo">Demostración</Stamp>
+        <Stamp kind="demo">Modo demostración</Stamp>
         <span className="source-note">
           <span className="visually-hidden">: personas, dispositivos y lecturas </span>
           <span aria-hidden="true">datos </span>simulados
@@ -82,12 +82,15 @@ export function Shell() {
   const { pendingCount } = useAlerts();
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
-  const firstRender = useRef(true);
+  const shownPath = useRef(location.pathname);
 
   useEffect(() => {
     // After client-side navigation, move focus to the new content so screen readers start there.
-    if (firstRender.current) firstRender.current = false;
-    else main.current?.focus({ preventScroll: true });
+    // Comparing paths (instead of a "first run" flag) keeps the initial load untouched even when
+    // StrictMode runs the effect twice in development.
+    if (shownPath.current === location.pathname) return;
+    shownPath.current = location.pathname;
+    main.current?.focus({ preventScroll: true });
   }, [location.pathname]);
 
   return (
