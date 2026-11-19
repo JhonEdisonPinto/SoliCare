@@ -1,33 +1,43 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, FlaskConical, House, Menu, Settings, UsersRound, Watch, X } from 'lucide-react';
 import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
+import { Stamp } from '../components/Stamp';
 import { useAlerts, useCare, useNow, useTelemetry } from '../data/hooks';
-import { timeAgo } from '../lib/time';
+import { formatFull, formatWhen } from '../lib/time';
 
-function BrandMark() {
-  // A house with one lit window: someone is keeping watch.
-  return (
-    <svg className="brand-mark" viewBox="0 0 28 28" aria-hidden="true">
-      <path d="M4 13.5 14 5l10 8.5V24H4z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
-      <rect x="11" y="14" width="6" height="6" rx="1" className="brand-window" />
-    </svg>
-  );
-}
-
-function ServerStatus() {
-  const { status, lastSuccessAt, source } = useTelemetry();
-  const now = useNow();
-  if (source.kind === 'demo') return <p className="server-status">Datos simulados en este navegador.</p>;
-  if (status === 'loading') return <p className="server-status">Conectando con el servidor…</p>;
-  if (status === 'unreachable') {
+/** Where the data comes from, stated in the chrome: simulation, live server, or no connection. */
+function SourceStatus() {
+  const { status, source } = useTelemetry();
+  if (source.kind === 'demo') {
     return (
-      <p className="server-status server-status--down">
-        Sin conexión con el servidor.
-        {lastSuccessAt ? ` Último dato ${timeAgo(new Date(lastSuccessAt).toISOString(), now)}.` : ''}
-      </p>
+      <span className="source">
+        <Stamp kind="demo">Demostración</Stamp>
+        <span className="source-note">
+          <span className="visually-hidden">: personas, dispositivos y lecturas </span>
+          <span aria-hidden="true">datos </span>simulados
+        </span>
+      </span>
     );
   }
-  return <p className="server-status">Servidor conectado.</p>;
+  if (status === 'unreachable') {
+    return (
+      <span className="source">
+        <Stamp kind="sistema">Sin conexión</Stamp>
+        <span className="source-note">con el servidor</span>
+      </span>
+    );
+  }
+  return <span className="source source-note">{status === 'loading' ? 'Conectando con el servidor…' : 'Servidor conectado'}</span>;
+}
+
+function Clock() {
+  const now = useNow();
+  const iso = new Date(now).toISOString();
+  return (
+    <time className="clock" dateTime={iso} title={formatFull(iso)}>
+      <span className="visually-hidden">Hora actual: </span>
+      {formatWhen(iso, now)}
+    </time>
+  );
 }
 
 /** Announces new falls assertively, once each, after the first load. */
@@ -61,75 +71,43 @@ function FallAnnouncer() {
 }
 
 const NAV = [
-  { to: '/', label: 'Resumen', icon: House, end: true },
-  { to: '/personas', label: 'Personas', icon: UsersRound },
-  { to: '/dispositivos', label: 'Dispositivos', icon: Watch },
-  { to: '/alertas', label: 'Alertas', icon: Bell },
-  { to: '/configuracion', label: 'Configuración', icon: Settings },
+  { to: '/', label: 'Resumen', end: true },
+  { to: '/personas', label: 'Personas' },
+  { to: '/dispositivos', label: 'Dispositivos' },
+  { to: '/alertas', label: 'Alertas' },
+  { to: '/configuracion', label: 'Configuración' },
 ] as const;
 
 export function Shell() {
   const { pendingCount } = useAlerts();
-  const { source } = useTelemetry();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuButton = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
 
   useEffect(() => {
-    setMenuOpen(false);
     // After client-side navigation, move focus to the new content so screen readers start there.
     if (firstRender.current) firstRender.current = false;
     else main.current?.focus({ preventScroll: true });
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMenuOpen(false);
-        menuButton.current?.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [menuOpen]);
 
   return (
     <div className="shell">
       <a className="skip-link" href="#contenido">
         Saltar al contenido
       </a>
-      <header className="shell-header">
-        <div className="rail">
-          <div className="shell-header-row">
-            <NavLink to="/" className="brand" end>
-              <BrandMark />
-              <span>SoliCare</span>
-            </NavLink>
-            <button
-              ref={menuButton}
-              type="button"
-              className="menu-button"
-              aria-expanded={menuOpen}
-              aria-controls="menu-principal"
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {menuOpen ? <X aria-hidden="true" className="icon" /> : <Menu aria-hidden="true" className="icon" />}
-              <span>Menú</span>
-              {pendingCount > 0 ? <span className="count-badge">{pendingCount}</span> : null}
-            </button>
-          </div>
-          <nav className="shell-nav" aria-label="Principal" data-open={menuOpen}>
-            <ul className="nav-list" id="menu-principal">
-              {NAV.map(({ to, label, icon: Icon, ...rest }) => (
+      <header className="console-bar">
+        <div className="console-bar-inner">
+          <NavLink to="/" className="brand" end>
+            SoliCare
+          </NavLink>
+          <nav className="tabs" aria-label="Principal">
+            <ul className="tab-list">
+              {NAV.map(({ to, label, ...rest }) => (
                 <li key={to}>
-                  <NavLink to={to} end={'end' in rest} className="nav-link">
-                    <Icon aria-hidden="true" className="icon" />
-                    <span>{label}</span>
+                  <NavLink to={to} end={'end' in rest} className="tab">
+                    {label}
                     {to === '/alertas' && pendingCount > 0 ? (
-                      <span className="count-badge">
+                      <span className="tab-count">
                         {pendingCount}
                         <span className="visually-hidden"> {pendingCount === 1 ? 'pendiente' : 'pendientes'}</span>
                       </span>
@@ -139,20 +117,13 @@ export function Shell() {
               ))}
             </ul>
           </nav>
-          <div className="shell-foot">
-            <ServerStatus />
+          <div className="console-meta">
+            <SourceStatus />
+            <Clock />
           </div>
         </div>
       </header>
       <main id="contenido" ref={main} className="shell-main" tabIndex={-1}>
-        {source.kind === 'demo' ? (
-          <p className="demo-strip">
-            <FlaskConical aria-hidden="true" className="icon" />
-            <span>
-              <strong>Modo demostración.</strong> Las personas, los dispositivos y las lecturas son simulados.
-            </span>
-          </p>
-        ) : null}
         <div className="page">
           <Outlet />
         </div>

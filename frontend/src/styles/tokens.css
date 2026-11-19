@@ -1,44 +1,40 @@
-/* Design tokens. Direction and contrast figures: .workflow design-research section 6. Light theme only. */
+/* Design tokens. Direction and contrast figures: .workflow design-research section 7 ("central console"). Light theme only. */
 :root {
   color-scheme: light;
 
-  /* Base palette */
-  --cal: #eff1ee; /* page plane: cool lime-wash grey */
-  --surface: #ffffff;
-  --ink: #1b2a33; /* slate blue, 12.97:1 on --cal */
-  --ink-2: #4a5a63; /* 6.30:1 on --cal */
-  --ink-3: #5e6c74; /* 4.77:1 on --cal */
-  --line: #d5dbd8;
-  --line-strong: #b9c2be;
-  --noche: #233f66; /* the one brand hue */
-  --noche-tint: #e3e9f2;
-  --senal: #2f5d8a; /* data ink: "the device reported" */
+  /* Planes and ink */
+  --paper: #ffffff; /* the work surface: one plane, no cards */
+  --chrome: #e8ecef; /* console chrome (tab bar): light steel */
+  --ink: #16242e; /* slate; 15.84:1 on paper, 13.33:1 on chrome */
+  --ink-2: #43535d; /* 7.97:1 on paper */
+  --ink-3: #5a6870; /* 5.76:1 on paper, 4.84:1 on chrome */
+  --rule: #cbd2d6; /* hairline between rows */
+  --rule-strong: var(--ink); /* 2 px rule under headers and the chrome */
+  --noche: #233f66; /* links and focus ring; 9.13:1 on the fall wash */
 
-  /* Reserved status set: state only, always with icon + text */
-  --caida: #a3241a;
-  --caida-ink: #ffffff;
-  --sin-reporte-mark: #b86e00;
-  --sin-reporte-text: #8a4b00;
-  --sin-reporte-bg: #fbf0da;
-  --en-linea: #1d7a46;
-  --sin-datos: #66727a;
+  /* Data ink: "the device reported" */
+  --senal: #2f5d8a; /* 6.88:1 on paper */
+  --baseline: #7a868d; /* empty stretch of a report bar, 3.74:1 */
 
-  /* Chart chrome */
-  --strip-track: #e2e7e4;
-  --strip-unknown: #c9d0cd;
+  /* Reserved status set: state only, always with text and a distinct shape */
+  --caida: #a3241a; /* white on it 7.43:1 */
+  --caida-wash: #fbeae7; /* background of an open fall row; ink 13.59:1, caida text 6.38:1 */
+  --sin-reporte-mark: #b86e00; /* stamp border, 3.99:1 (UI) */
+  --sin-reporte-text: #8a4b00; /* 6.80:1 on paper */
+  --en-linea: #1d7a46; /* 5.35:1 */
+  --sin-datos: #66727a; /* 4.94:1 */
 
-  /* Type */
+  /* Type: one family, tabular figures wherever numbers sit in columns */
   --font: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible', system-ui, sans-serif;
-  --text-xs: 0.875rem;
-  --text-base: 1.0625rem;
+  --text-sm: 0.9375rem; /* 15 px: secondary cells, stamps */
+  --text-xs: 0.875rem; /* 14 px: smallest (axis labels) */
+  --text-base: 1.0625rem; /* 17 px body */
   --text-md: 1.25rem;
   --text-lg: 1.5rem;
-  --text-xl: 2rem;
-  --text-title: clamp(2rem, 1.6rem + 1.6vw, 2.625rem);
   --weight-body: 400;
-  --weight-label: 600;
-  --weight-title: 760;
-  --measure: 62ch;
+  --weight-label: 650;
+  --weight-strong: 760;
+  --measure: 66ch;
 
   /* Spacing (4 px base) */
   --s-1: 0.25rem;
@@ -48,22 +44,22 @@
   --s-5: 1.5rem;
   --s-6: 2rem;
   --s-7: 3rem;
-  --s-8: 4rem;
   --gutter: 1rem;
+  --content-max: 80rem;
 
-  /* Radius by role */
-  --r-control: 0.375rem;
-  --r-panel: 0.75rem;
+  /* Geometry: square by default; stamps and keys get a 2 px corner so they read as objects, not boxes */
+  --r-key: 2px;
+  --row-min: 3rem;
 
-  /* Elevation: only for floating elements */
-  --shadow-float: 0 0.5rem 1.5rem rgb(27 42 51 / 0.16);
+  /* Elevation: only for floating elements (toast) */
+  --shadow-float: 0 0.5rem 1.5rem rgb(22 36 46 / 0.2);
 
   --focus: 3px solid var(--noche);
   --target: 2.75rem; /* 44 px primary targets */
 }
 
-@media (min-width: 40rem) {
+@media (min-width: 48rem) {
   :root {
-    --gutter: 2rem;
+    --gutter: 1.5rem;
   }
 }

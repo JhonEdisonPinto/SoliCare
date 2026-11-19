@@ -1,44 +1,25 @@
-import { CircleDashed, Clock3, TriangleAlert, WifiOff } from 'lucide-react';
-
-export type StatusKind = 'en-linea' | 'sin-reporte' | 'nunca' | 'sin-dispositivo' | 'desconocido' | 'caida' | 'conexion';
+export type StatusKind = 'en-linea' | 'sin-reporte' | 'nunca' | 'sin-dispositivo' | 'desconocido';
 
 const LABEL: Record<StatusKind, string> = {
   'en-linea': 'En línea',
   'sin-reporte': 'Sin reporte reciente',
   nunca: 'Sin datos todavía',
-  'sin-dispositivo': 'Sin dispositivo asignado',
+  'sin-dispositivo': 'Sin dispositivo',
   desconocido: 'Estado desconocido',
-  caida: 'Caída',
-  conexion: 'Sin conexión',
 };
 
-function Glyph({ kind }: { kind: StatusKind }) {
-  switch (kind) {
-    case 'en-linea':
-      return (
-        <svg className="status-glyph" viewBox="0 0 16 16" aria-hidden="true">
-          <circle cx="8" cy="8" r="5" fill="currentColor" />
-        </svg>
-      );
-    case 'sin-reporte':
-      return <Clock3 className="status-glyph" aria-hidden="true" />;
-    case 'conexion':
-      return <WifiOff className="status-glyph" aria-hidden="true" />;
-    case 'caida':
-      return <TriangleAlert className="status-glyph" aria-hidden="true" />;
-    default:
-      return <CircleDashed className="status-glyph" aria-hidden="true" />;
-  }
-}
-
-/** A state shown as icon shape plus text, never color alone. `detail` adds context such as "hace 12 min". */
-export function StatusMark({ kind, detail, label }: { kind: StatusKind; detail?: string; label?: string }) {
+/**
+ * A device or person state for a table cell: a small shape plus text, never color alone. Filled square
+ * for "en línea", a heavy hollow square for "sin reporte", a dashed hollow square for setup states.
+ * `detail` adds a second line such as "último hace 47 min".
+ */
+export function StatusMark({ kind, detail }: { kind: StatusKind; detail?: string }) {
   return (
     <span className={`status status--${kind}`}>
-      <Glyph kind={kind} />
+      <span className="status-glyph" aria-hidden="true" />
       <span className="status-text">
-        {label ?? LABEL[kind]}
-        {detail ? <span className="status-detail"> {detail}</span> : null}
+        {LABEL[kind]}
+        {detail ? <span className="status-detail">{detail}</span> : null}
       </span>
     </span>
   );

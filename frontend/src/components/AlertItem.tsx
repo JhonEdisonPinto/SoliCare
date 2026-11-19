@@ -1,32 +1,28 @@
-import { Phone, TriangleAlert, WifiOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Alert, Person } from '../data/types';
 import { useCare, useCareActions } from '../data/hooks';
 import { formatFull, formatWhen, timeAgo } from '../lib/time';
+import { Stamp } from './Stamp';
 import { useToast } from './Toast';
-
-function subjectName(alert: Alert, person: Person | undefined): string {
-  return person ? person.name : `Dispositivo ${alert.deviceId}`;
-}
 
 function When({ iso, now }: { iso: string; now: number }) {
   return (
     <time dateTime={iso} title={formatFull(iso)}>
-      {timeAgo(iso, now)} ({formatWhen(iso, now)})
+      {formatWhen(iso, now)} ({timeAgo(iso, now)})
     </time>
   );
 }
 
 /**
- * One open alert with its single next action. Falls render as the full-bleed band (the only loud element
- * in the product); connection alerts as a quiet row with an amber rule.
+ * One open alert as a line of the event log: stamp, time, person, device, age and the single next action.
+ * An open fall is the only row with a colored background; connection alerts stay plain.
  */
 export function AlertItem({ alert, person, now }: { alert: Alert; person: Person | undefined; now: number }) {
   const actions = useCareActions();
   const { acknowledgements } = useCare();
   const toast = useToast();
-  const name = subjectName(alert, person);
   const isFall = alert.kind === 'caida';
+  const pending = alert.state === 'pendiente';
 
   const act = async (kind: 'atender' | 'resolver') => {
     const previous = acknowledgements[alert.id];
@@ -39,30 +35,40 @@ export function AlertItem({ alert, person, now }: { alert: Alert; person: Person
     });
   };
 
-  const title = isFall ? `Caída detectada: ${name}` : `Sin reporte reciente: ${name}`;
+  const stampKind = isFall ? (pending ? 'caida' : 'caida-atendida') : pending ? 'sin-reporte' : 'atendida';
   const contacts = isFall && person ? person.contacts.filter((contact) => contact.phone).slice(0, 2) : [];
+  const name = person ? person.name : `Dispositivo ${alert.deviceId}`;
 
   return (
-    <li className={isFall ? 'fall-band' : 'alert-row'}>
-      <div className="alert-icon" aria-hidden="true">
-        {isFall ? <TriangleAlert /> : <WifiOff />}
-      </div>
-      <div className="alert-body">
-        <h3 className="alert-title">{title}</h3>
-        <p className="alert-meta">
-          {isFall ? (
-            <>
-              Detectada <When iso={alert.at} now={now} /> por el dispositivo {alert.deviceId}.
-            </>
-          ) : (
-            <>
-              El dispositivo {alert.deviceId} reportó por última vez <When iso={alert.at} now={now} />.
-            </>
-          )}
-        </p>
-        <p className="alert-state">
-          {alert.state === 'pendiente' ? (
-            'Nadie la ha marcado como atendida.'
+    <li className={`event event--${alert.kind} event--${alert.state}`}>
+      <span className="event-stamp">
+        <Stamp kind={stampKind}>{isFall ? 'Caída' : 'Sin reporte'}</Stamp>
+      </span>
+      <time className="event-time" dateTime={alert.at} title={formatFull(alert.at)}>
+        {formatWhen(alert.at, now)}
+      </time>
+      <span className="event-subject">
+        {person ? (
+          <Link className="event-name" to={`/personas/${person.id}`}>
+            {person.name}
+          </Link>
+        ) : (
+          <Link className="event-name" to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>
+            {name}
+          </Link>
+        )}
+        {person?.relation ? <span className="event-relation">{person.relation}</span> : null}
+      </span>
+      <span className="event-device">
+        <span className="visually-hidden">Dispositivo </span>
+        {alert.deviceId}
+      </span>
+      <span className="event-age">{timeAgo(alert.at, now)}</span>
+      <div className="event-detail">
+        <p>
+          {isFall ? null : <>Sin reportes del dispositivo desde esa hora. </>}
+          {pending ? (
+            <>Pendiente: nadie la ha marcado como atendida.</>
           ) : (
             <>
               Atendida <When iso={alert.acknowledgedAt ?? alert.at} now={now} />
@@ -71,37 +77,29 @@ export function AlertItem({ alert, person, now }: { alert: Alert; person: Person
           )}
         </p>
         {contacts.length > 0 ? (
-          <ul className="alert-contacts" aria-label={`Contactos de emergencia de ${name}`}>
+          <p className="event-contacts">
+            <span className="event-contacts-label">Llamar:</span>
             {contacts.map((contact) => (
-              <li key={contact.id}>
-                <a className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
-                  <Phone aria-hidden="true" className="icon" />
-                  Llamar a {contact.name}
-                  {contact.relation ? ` (${contact.relation.toLowerCase()})` : ''}
-                </a>
-              </li>
+              <a key={contact.id} className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
+                {contact.name}
+                {contact.relation ? ` (${contact.relation.toLowerCase()})` : ''}{' '}
+                <span className="contact-phone">{contact.phone}</span>
+              </a>
             ))}
-          </ul>
+          </p>
         ) : null}
       </div>
-      <div className="alert-actions">
-        {alert.state === 'pendiente' ? (
-          <button type="button" className="button button--primary" onClick={() => void act('atender')}>
+      <div className="event-action">
+        {pending ? (
+          <button type="button" className="key" onClick={() => void act('atender')}>
             Marcar como atendida
+            <span className="visually-hidden">: {isFall ? 'caída' : 'sin reporte'} de {name}</span>
           </button>
         ) : (
-          <button type="button" className="button button--primary" onClick={() => void act('resolver')}>
+          <button type="button" className="key" onClick={() => void act('resolver')}>
             Marcar como resuelta
+            <span className="visually-hidden">: {isFall ? 'caída' : 'sin reporte'} de {name}</span>
           </button>
-        )}
-        {person ? (
-          <Link className="button button--quiet" to={`/personas/${person.id}`}>
-            Ver a {person.name.split(' ')[0]}
-          </Link>
-        ) : (
-          <Link className="button button--quiet" to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>
-            Ver dispositivo
-          </Link>
         )}
       </div>
     </li>

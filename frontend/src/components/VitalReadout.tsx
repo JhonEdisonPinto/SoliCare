@@ -1,27 +1,17 @@
 import type { LatestVital, VitalKey } from '../lib/vitals';
-import { VITAL_LABEL, VITAL_UNIT } from '../lib/vitals';
-import { formatFull, timeAgo } from '../lib/time';
+import { VITAL_UNIT } from '../lib/vitals';
 
-/** Latest valid value with its unit and age. A missing value says so instead of showing 0. */
-export function VitalReadout({ vital, kind, now, showAge = true }: { vital: LatestVital; kind: VitalKey; now: number; showAge?: boolean }) {
+/**
+ * Latest valid value of one vital for a table cell, with tabular figures. The unit is in the column
+ * header on wide screens and visible beside the value in the stacked layout; screen readers always get
+ * it. A missing value says so instead of showing 0.
+ */
+export function VitalReadout({ vital, kind }: { vital: LatestVital; kind: VitalKey }) {
+  if (!vital) return <span className="vital-missing">Sin lectura válida</span>;
   return (
-    <div className="vital">
-      <span className="vital-label">{VITAL_LABEL[kind]}</span>
-      {vital ? (
-        <>
-          <span className="vital-value">
-            {vital.value}
-            <span className="vital-unit">{kind === 'spo2' ? ' %' : ` ${VITAL_UNIT[kind]}`}</span>
-          </span>
-          {showAge ? (
-            <time className="vital-age" dateTime={vital.at} title={formatFull(vital.at)}>
-              {timeAgo(vital.at, now)}
-            </time>
-          ) : null}
-        </>
-      ) : (
-        <span className="vital-missing">Sin lectura válida</span>
-      )}
-    </div>
+    <span className="vital">
+      <span className="vital-value">{vital.value}</span>
+      <span className="vital-unit">{kind === 'spo2' ? ' %' : ` ${VITAL_UNIT[kind]}`}</span>
+    </span>
   );
 }

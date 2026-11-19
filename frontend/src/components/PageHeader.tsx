@@ -1,14 +1,14 @@
 import { useEffect, type ReactNode } from 'react';
 
-/** View title (the page's only h1) and the document title, plus optional content beside it. */
+/** The view's status line: its title (the page's only h1), the document title, and optional content beside it. */
 export function PageHeader({ title, children }: { title: string; children?: ReactNode }) {
   useEffect(() => {
     document.title = `${title} | SoliCare`;
   }, [title]);
   return (
-    <div className="page-header">
-      <h1 className="page-title">{title}</h1>
-      {children ? <div className="page-header-aside">{children}</div> : null}
+    <div className="status-line">
+      <h1 className="view-title">{title}</h1>
+      {children}
     </div>
   );
 }
