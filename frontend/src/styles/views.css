@@ -892,10 +892,6 @@
   font-size: 0.8125rem;
 }
 
-.contact-link {
-  font-weight: 600;
-}
-
 .contact-phone {
   margin-inline-start: 0.3em;
   font-variant-numeric: tabular-nums;
@@ -1012,17 +1008,6 @@
 
 .event-note-text {
   font-style: italic;
-}
-
-.event-contacts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-}
-
-.event-contacts-label {
-  font-weight: 700;
 }
 
 .event-action {
@@ -1426,8 +1411,6 @@
 .alert-banner-more a,
 .unassigned a,
 .people-more a,
-.event-contacts a,
-.contact-link,
 .event-detail a,
 .event-subject a,
 .fact a {

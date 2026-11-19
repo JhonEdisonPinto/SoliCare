@@ -75,7 +75,7 @@ export function recentActivity(input: {
   }
   for (const alert of alerts) {
     if (alert.kind === 'caida') {
-      items.push({ id: `caida:${alert.id}`, kind: 'caida', title: 'Caída detectada', description: who(alert.deviceId, alert.personId), at: alert.at });
+      items.push({ id: `caida:${alert.id}`, kind: 'caida', title: alert.simulated ? 'Caída simulada' : 'Caída detectada', description: who(alert.deviceId, alert.personId), at: alert.at });
     } else {
       items.push({
         id: `sin-reporte:${alert.id}`,

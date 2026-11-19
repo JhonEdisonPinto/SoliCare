@@ -475,7 +475,7 @@
   border-color: #cdd8d5;
 }
 
-.btn--outline:hover:not(:disabled) {
+.btn--outline:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--brand-soft);
   border-color: #a9cfc6;
 }

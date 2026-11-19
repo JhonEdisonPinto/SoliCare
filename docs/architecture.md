@@ -16,8 +16,9 @@ válida y no deben interpretarse como valores clínicos.
 
 ## Alertas
 
-Una caída se registra como evento prioritario y dispara la notificación a todos
-los contactos configurados. La falta de reportes se calcula en el backend,
+Una caída se registra como evento prioritario. La notificación automática a los
+contactos aún no existe; para la demostración, el botón «Simular caída» envía una
+secuencia de prueba a un grupo de Telegram (ver `backend/README.md`). La falta de reportes se calcula en el backend,
 porque el dispositivo puede perder conectividad y no puede notificarse a sí
 mismo.
 

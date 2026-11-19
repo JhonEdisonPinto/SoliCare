@@ -112,7 +112,7 @@ function ContactsBlock({ person }: { person: Person }) {
         kicker="Emergencias"
         title="Contactos que serán notificados"
         count={person.contacts.length}
-        note="Por ahora SoliCare no envía mensajes ni llamadas: muestra estos contactos para que se les llame cuando hay una caída. Las alertas muestran los dos primeros de la lista."
+        note="Por ahora SoliCare no avisa a estos contactos de una caída real. En «Simular caída» los tres primeros con teléfono reciben una llamada simulada en el grupo de Telegram."
         actions={
           <button ref={addKey} type="button" className="btn btn--outline" aria-expanded={editing === 'new'} onClick={() => setEditing(editing === 'new' ? null : 'new')}>
             <Plus size={16} aria-hidden="true" /> Añadir contacto
@@ -137,10 +137,7 @@ function ContactsBlock({ person }: { person: Person }) {
                   <span className="contact-name">{contact.name}</span>
                   <span className="contact-relation">{contact.relation}</span>
                 </span>
-                <a className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
-                  <span className="visually-hidden">Llamar a {contact.name}: </span>
-                  <span className="contact-phone">{contact.phone}</span>
-                </a>
+                <span className="contact-phone">{contact.phone}</span>
                 <span className="contact-actions">
                   <button type="button" className="btn btn--outline btn--small" data-edit={contact.id} onClick={() => setEditing(contact.id)}>
                     Editar<span className="visually-hidden"> a {contact.name}</span>

@@ -13,5 +13,8 @@ export const env = {
   deviceIngestToken: process.env.DEVICE_INGEST_TOKEN,
   /** Key of the panel (the care data routes). Falls back to the device token while unset. */
   panelToken: process.env.PANEL_TOKEN,
+  /** Telegram bot of the fall simulation. Both unset: the simulation runs only on screen. */
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN?.trim() || undefined,
+  telegramChatId: process.env.TELEGRAM_CHAT_ID?.trim() || undefined,
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
 };

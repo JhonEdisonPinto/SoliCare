@@ -5,8 +5,10 @@ import { corsOptions } from './config/cors.js';
 import { env } from './config/env.js';
 import { careStore, checkDatabase, initializeDatabase } from './db/database.js';
 import { registerCareRoutes } from './routes/care.js';
+import { registerSimulationRoutes } from './routes/simulation.js';
 import { registerStatsRoutes } from './routes/stats.js';
 import { registerTelemetryRoutes } from './routes/telemetry.js';
+import { createTelegramNotify } from './services/telegram.js';
 
 const app = Fastify({ logger: true });
 
@@ -24,9 +26,12 @@ app.get('/health', async (_request, reply) => {
 await registerTelemetryRoutes(app);
 await registerStatsRoutes(app);
 if (careStore) {
-  await registerCareRoutes(app, {
+  const isAuthorized = createPanelAuth({ panelToken: env.panelToken });
+  await registerCareRoutes(app, { store: careStore, isAuthorized });
+  await registerSimulationRoutes(app, {
     store: careStore,
-    isAuthorized: createPanelAuth({ panelToken: env.panelToken }),
+    isAuthorized,
+    notify: createTelegramNotify({ botToken: env.telegramBotToken, chatId: env.telegramChatId }),
   });
 }
 await initializeDatabase();

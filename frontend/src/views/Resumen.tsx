@@ -6,6 +6,7 @@ import {
   HeartPulse,
   Plus,
   ShieldCheck,
+  Siren,
   UsersRound,
   Wifi,
   WifiOff,
@@ -18,10 +19,12 @@ import { FallPanel } from '../components/FallPanel';
 import { PageHeader } from '../components/PageHeader';
 import { PanelHead } from '../components/PanelHead';
 import { StatusPillFor } from '../components/StatusPill';
-import { contactsToCall, useAlertActions } from '../components/useAlertActions';
+import { useToast } from '../components/Toast';
+import { useAlertActions } from '../components/useAlertActions';
 import { VitalsCard } from '../components/VitalsCard';
 import { recentActivity, responseStats, type ActivityKind } from '../data/dashboard';
-import { useAlerts, useCare, useDeviceSummaries, useNow, usePeopleSummary, useReferenceNow, useTelemetry } from '../data/hooks';
+import { useAlerts, useCare, useDeviceSummaries, useNow, usePeopleSummary, useReferenceNow, useSimulation, useTelemetry } from '../data/hooks';
+import { simulationCandidates, type TelegramOutcome } from '../data/simulation';
 import type { PersonSummary } from '../data/summary';
 import type { Alert, Person } from '../data/types';
 import { avatarTone, initials } from '../lib/people';
@@ -99,7 +102,6 @@ function AlertBanner({ alert, others, onDismiss, now }: { alert: Alert; others: 
   const isFall = alert.kind === 'caida';
   const pending = alert.state === 'pendiente';
   const name = person ? person.name : `el dispositivo ${alert.deviceId}`;
-  const contacts = contactsToCall(alert, person);
   const subject = `${isFall ? 'caída' : 'sin reporte'} de ${person ? person.name : `Dispositivo ${alert.deviceId}`}`;
 
   let title: string;
@@ -108,6 +110,7 @@ function AlertBanner({ alert, others, onDismiss, now }: { alert: Alert; others: 
     title = pending ? 'Caída sin atender' : 'Caída atendida, falta resolverla';
     message = (
       <>
+        {alert.simulated ? 'Simulación: ' : null}
         <b>{name}</b> tuvo una caída {timeAgo(alert.at, now)}.
       </>
     );
@@ -128,17 +131,6 @@ function AlertBanner({ alert, others, onDismiss, now }: { alert: Alert; others: 
       <div className="alert-banner-copy">
         <h2 id="banner-titulo">{title}</h2>
         <p>{message}</p>
-        {contacts.length > 0 ? (
-          <p className="event-contacts">
-            <span className="event-contacts-label">Llamar:</span>
-            {contacts.map((contact) => (
-              <a key={contact.id} className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
-                {contact.name}
-                {contact.relation ? ` (${contact.relation.toLowerCase()})` : ''} <span className="contact-phone">{contact.phone}</span>
-              </a>
-            ))}
-          </p>
-        ) : null}
         {others > 0 ? (
           <p className="alert-banner-more">
             <Link to="/alertas">
@@ -147,7 +139,7 @@ function AlertBanner({ alert, others, onDismiss, now }: { alert: Alert; others: 
           </p>
         ) : null}
       </div>
-      {isFall ? (
+      {alert.simulated ? null : isFall ? (
         <button type="button" className={pending ? 'btn btn--primary' : 'btn btn--outline'} onClick={() => void act(pending ? 'atender' : 'resolver')}>
           {pending ? 'Marcar como atendida' : 'Marcar como resuelta'}
           <span className="visually-hidden">: {subject}</span>
@@ -163,6 +155,38 @@ function AlertBanner({ alert, others, onDismiss, now }: { alert: Alert; others: 
         <span className="visually-hidden">Cerrar aviso</span>
       </button>
     </section>
+  );
+}
+
+const SIMULATION_TOAST: Record<TelegramOutcome, string> = {
+  enviado: 'Simulación en curso: revisa el grupo de Telegram.',
+  'sin-configurar': 'Simulación en curso. Telegram no está configurado en el servidor: no se enviaron mensajes.',
+  error: 'Simulación en curso, pero Telegram rechazó el mensaje. Revisa el token y el chat del bot.',
+  demo: 'Simulación en curso. En modo demostración no se envían mensajes a Telegram.',
+  'sin-servidor': 'Simulación en curso solo en este panel: el servidor no respondió y Telegram no recibió avisos.',
+  ocupado: 'Ya hay una simulación en curso desde otro panel; Telegram no se avisó otra vez.',
+};
+
+/** Picks a person who is green right now and simulates a fall for them; they go back to green on their own. */
+function SimulateButton({ rows }: { rows: PersonSummary[] }) {
+  const { active, start } = useSimulation();
+  const toast = useToast();
+  const run = async () => {
+    if (active) return;
+    const candidates = simulationCandidates(rows);
+    if (candidates.length === 0) {
+      toast({ text: 'No hay nadie en verde para simular: hace falta una persona con su dispositivo en línea y sin alertas abiertas.' });
+      return;
+    }
+    const row = candidates[Math.floor(Math.random() * candidates.length)];
+    const result = await start(row.person.id, row.person.deviceId as string);
+    toast({ text: SIMULATION_TOAST[result.telegram] });
+  };
+  return (
+    // aria-disabled rather than disabled, so keyboard focus stays on the button while the simulation runs.
+    <button type="button" className="btn btn--outline" aria-disabled={active !== null} onClick={() => void run()}>
+      <Siren size={18} aria-hidden="true" /> {active ? 'Simulación en curso…' : 'Simular caída'}
+    </button>
   );
 }
 
@@ -354,6 +378,7 @@ export function Resumen() {
           </>
         }
       >
+        <SimulateButton rows={summary.people} />
         <Link className="btn btn--primary" to="/personas?agregar=1">
           <Plus size={18} aria-hidden="true" /> Añadir persona
         </Link>

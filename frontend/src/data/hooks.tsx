@@ -3,7 +3,8 @@ import type { TelemetrySource } from './api';
 import { ApiError } from './api';
 import type { CareRepository } from './store';
 import type { Alert, CareData, Device, DeviceStats, Reading } from './types';
-import { alertReferenceTime, deriveAlerts, isOpen } from './alerts';
+import { alertReferenceTime, compareAlerts, deriveAlerts, isOpen } from './alerts';
+import { requestSimulation, simulatedFall, type SimulationStart } from './simulation';
 import { summarizeDevices, summarizePeople, unassignedDevices, type DeviceSummary, type PersonSummary } from './summary';
 import { usePolling } from './polling';
 
@@ -27,9 +28,19 @@ type TelemetryData = Omit<TelemetryState, 'source' | 'refresh'>;
 
 type AlertsValue = { alerts: Alert[]; open: Alert[]; pendingCount: number };
 
+export type SimulationValue = {
+  /** The simulated fall while one runs. */
+  active: Alert | null;
+  /** Shows a fall for this person at once and asks the server to send the Telegram messages. */
+  start: (personId: string, deviceId: string) => Promise<SimulationStart>;
+};
+
+type ActiveSimulation = { alert: Alert; endsAt: number };
+
 const TelemetryContext = createContext<TelemetryState | null>(null);
 const RepositoryContext = createContext<CareRepository | null>(null);
 const AlertsContext = createContext<AlertsValue | null>(null);
+const SimulationContext = createContext<SimulationValue | null>(null);
 const NowContext = createContext<number>(Date.now());
 const ReferenceNowContext = createContext<number>(Date.now());
 
@@ -133,17 +144,42 @@ export function DataProvider({ source, repository, children }: { source: Telemet
     if (derivation.newJournalEntries.length > 0) repository.recordAlertEvents(derivation.newJournalEntries).catch(() => undefined);
   }, [derivation.newJournalEntries, repository]);
 
+  const [simulation, setSimulation] = useState<ActiveSimulation | null>(null);
+
+  useEffect(() => {
+    // Infinite while the server has not answered yet (a timer that large would fire at once).
+    if (!simulation || !Number.isFinite(simulation.endsAt)) return;
+    const timer = setTimeout(() => setSimulation((current) => (current === simulation ? null : current)), Math.max(simulation.endsAt - Date.now(), 0));
+    return () => clearTimeout(timer);
+  }, [simulation]);
+
+  const startSimulation = useCallback(async (personId: string, deviceId: string) => {
+    const startedAt = Date.now();
+    const alert = simulatedFall(personId, deviceId, startedAt);
+    const pending: ActiveSimulation = { alert, endsAt: Number.POSITIVE_INFINITY };
+    setSimulation(pending);
+    const result = await requestSimulation(personId);
+    setSimulation((current) => (current === pending ? { alert, endsAt: startedAt + result.durationMs } : current));
+    return result;
+  }, []);
+
+  const simulationValue = useMemo<SimulationValue>(() => ({ active: simulation?.alert ?? null, start: startSimulation }), [simulation, startSimulation]);
+
   const alertsValue = useMemo<AlertsValue>(() => {
-    const open = derivation.alerts.filter(isOpen);
-    return { alerts: derivation.alerts, open, pendingCount: open.filter((alert) => alert.state === 'pendiente').length };
-  }, [derivation.alerts]);
+    // The simulated fall joins the derived alerts only here, so every view shows it and nothing stores it.
+    const alerts = simulation ? [simulation.alert, ...derivation.alerts].sort(compareAlerts) : derivation.alerts;
+    const open = alerts.filter(isOpen);
+    return { alerts, open, pendingCount: open.filter((alert) => alert.state === 'pendiente').length };
+  }, [derivation.alerts, simulation]);
 
   return (
     <RepositoryContext.Provider value={repository}>
       <TelemetryContext.Provider value={telemetryValue}>
         <NowContext.Provider value={now}>
           <ReferenceNowContext.Provider value={referenceNow}>
-            <AlertsContext.Provider value={alertsValue}>{children}</AlertsContext.Provider>
+            <AlertsContext.Provider value={alertsValue}>
+              <SimulationContext.Provider value={simulationValue}>{children}</SimulationContext.Provider>
+            </AlertsContext.Provider>
           </ReferenceNowContext.Provider>
         </NowContext.Provider>
       </TelemetryContext.Provider>
@@ -184,6 +220,11 @@ export function useReferenceNow(): number {
 /** Derived alerts: all, open ones, and the number nobody has acknowledged yet. */
 export function useAlerts(): AlertsValue {
   return required(useContext(AlertsContext), 'useAlerts');
+}
+
+/** The fall simulation: the simulated alert while one runs, and how to start one. */
+export function useSimulation(): SimulationValue {
+  return required(useContext(SimulationContext), 'useSimulation');
 }
 
 /** People with their device, status, latest valid vitals and open alerts, sorted by need. */

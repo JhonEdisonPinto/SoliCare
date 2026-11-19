@@ -42,7 +42,7 @@ export function FallPanel({ row, now }: { row: PersonSummary | undefined; now: n
           <div className="fall-status-copy">
             <span>Estado actual</span>
             <strong>{!row ? 'Sin datos' : pending ? 'Caída sin atender' : fall ? 'Caída atendida, pendiente de resolver' : 'Sin eventos detectados'}</strong>
-            <small>{fall ? `Detectada ${timeAgo(fall.at, now)}. ${subject}` : row ? `No hay caídas abiertas. ${subject}` : 'Asigna un dispositivo a una persona.'}</small>
+            <small>{fall ? `${fall.simulated ? 'Simulación. ' : ''}Detectada ${timeAgo(fall.at, now)}. ${subject}` : row ? `No hay caídas abiertas. ${subject}` : 'Asigna un dispositivo a una persona.'}</small>
           </div>
         </div>
         <div className="fall-metric">
@@ -83,7 +83,7 @@ export function FallPanel({ row, now }: { row: PersonSummary | undefined; now: n
         </div>
       </div>
       <p className="fall-note">
-        <AlertTriangle size={13} aria-hidden="true" /> SoliCare muestra las caídas y a quién llamar; por ahora no envía mensajes ni llamadas.
+        <AlertTriangle size={13} aria-hidden="true" /> Por ahora SoliCare no avisa a nadie de una caída real. «Simular caída» envía un aviso de prueba al grupo de Telegram.
       </p>
     </section>
   );

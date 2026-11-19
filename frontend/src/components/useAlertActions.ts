@@ -22,8 +22,3 @@ export function useAlertActions(alert: Alert) {
     });
   };
 }
-
-/** Phone numbers to call for an open fall: the first two contacts that have one. */
-export function contactsToCall(alert: Alert, person: { contacts: { id: string; name: string; relation: string; phone: string }[] } | undefined) {
-  return alert.kind === 'caida' && alert.state !== 'resuelta' && person ? person.contacts.filter((contact) => contact.phone).slice(0, 2) : [];
-}

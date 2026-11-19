@@ -1,10 +1,10 @@
-import { AlertTriangle, CheckCircle2, Phone, WifiOff } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, WifiOff } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { Alert, Person } from '../data/types';
 import { formatFull, formatWhen, timeAgo } from '../lib/time';
 import { Pill, type PillTone } from './Pill';
-import { contactsToCall, useAlertActions } from './useAlertActions';
+import { useAlertActions } from './useAlertActions';
 
 function When({ iso, now }: { iso: string; now: number }) {
   return (
@@ -27,7 +27,7 @@ type Props = {
 /**
  * One alert as a card: icon, what happened, who and when, the state, and the single next action. An open
  * fall is the only card with a red tint; connection alerts are amber; resolved alerts stay readable but
- * offer no action.
+ * offer no action. A simulated fall ("Simular caída") is labelled as such and offers no action either.
  */
 export function AlertItem({ alert, person, now, withNote = false, onActed }: Props) {
   const act = useAlertActions(alert);
@@ -76,7 +76,6 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
 
   const tone: PillTone = resolved ? 'neutral' : pending ? (isFall ? 'danger' : 'warn') : 'info';
   const stateLabel = resolved ? 'Resuelta' : pending ? 'Pendiente' : 'Atendida';
-  const contacts = contactsToCall(alert, person);
   const name = person ? person.name : `Dispositivo ${alert.deviceId}`;
   const subject = `${isFall ? 'caída' : 'sin reporte'} de ${name}`;
   const Icon = resolved ? CheckCircle2 : isFall ? AlertTriangle : WifiOff;
@@ -90,6 +89,7 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
         <div className="event-head">
           <strong className="event-title">{isFall ? 'Caída' : 'Sin reporte'}</strong>
           <Pill tone={tone}>{stateLabel}</Pill>
+          {alert.simulated ? <Pill tone="neutral">Simulación</Pill> : null}
         </div>
         <p className="event-subject">
           {person ? (
@@ -131,22 +131,10 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
               {alert.resolveNote ? <span className="event-note-text"> Nota: {alert.resolveNote}</span> : null}
             </p>
           ) : null}
-          {contacts.length > 0 ? (
-            <p className="event-contacts">
-              <Phone size={14} aria-hidden="true" />
-              <span className="event-contacts-label">Llamar:</span>
-              {contacts.map((contact) => (
-                <a key={contact.id} className="contact-link" href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>
-                  {contact.name}
-                  {contact.relation ? ` (${contact.relation.toLowerCase()})` : ''}{' '}
-                  <span className="contact-phone">{contact.phone}</span>
-                </a>
-              ))}
-            </p>
-          ) : null}
+          {alert.simulated ? <p>Simulación: los avisos van al grupo de Telegram y la persona vuelve a estar bien en unos segundos.</p> : null}
         </div>
       </div>
-      {!resolved ? (
+      {!resolved && !alert.simulated ? (
         <div className="event-action">
           <button ref={key} type="button" className={pending ? 'btn btn--primary' : 'btn btn--outline'} onClick={() => void run(pending ? 'atender' : 'resolver')}>
             {pending ? 'Marcar como atendida' : 'Marcar como resuelta'}
