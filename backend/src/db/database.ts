@@ -1,5 +1,7 @@
 import pg from 'pg';
 import { env } from '../config/env.js';
+import { CARE_TABLE_SQL, createPgCareStore } from '../care/pgStore.js';
+import type { CareStore } from '../care/store.js';
 import type { TelemetryPayload } from '../types/telemetry.js';
 
 const { Pool } = pg;
@@ -29,7 +31,11 @@ export async function initializeDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS telemetry_device_received_idx
       ON telemetry (device_id, received_at DESC);
   `);
+  await pool.query(CARE_TABLE_SQL);
 }
+
+/** The care document store, or null when DATABASE_URL is not configured. */
+export const careStore: CareStore | null = pool ? createPgCareStore(pool) : null;
 
 export async function saveTelemetry(payload: TelemetryPayload, receivedAt: Date): Promise<void> {
   if (!pool) {

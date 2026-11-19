@@ -24,7 +24,7 @@ export class ApiError extends Error {
   }
 }
 
-const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:8080').replace(/\/$/, '');
+export const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:8080').replace(/\/$/, '');
 
 export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 

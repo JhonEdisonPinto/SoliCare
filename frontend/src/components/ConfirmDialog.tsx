@@ -4,6 +4,8 @@ type Props = {
   open: boolean;
   title: string;
   confirmLabel: string;
+  /** `danger` (default) for destructive actions; `primary` when the action only adds or changes. */
+  tone?: 'danger' | 'primary';
   children: ReactNode;
   onConfirm: () => Promise<void> | void;
   onCancel: () => void;
@@ -14,7 +16,7 @@ type Props = {
  * it, and the browser returns focus to the control that opened it. No role or focus trap is added: the
  * platform provides them.
  */
-export function ConfirmDialog({ open, title, confirmLabel, children, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ open, title, confirmLabel, tone = 'danger', children, onConfirm, onCancel }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -50,7 +52,7 @@ export function ConfirmDialog({ open, title, confirmLabel, children, onConfirm, 
         <button ref={cancelRef} type="button" className="btn btn--outline" onClick={() => ref.current?.close()}>
           Cancelar
         </button>
-        <button type="button" className="btn btn--danger" disabled={busy} onClick={() => void confirm()}>
+        <button type="button" className={`btn btn--${tone}`} disabled={busy} onClick={() => void confirm()}>
           {confirmLabel}
         </button>
       </div>

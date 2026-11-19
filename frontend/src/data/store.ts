@@ -6,12 +6,14 @@ export type PersonInput = { name: string; relation: string; deviceId: string | n
 export type ContactInput = Omit<EmergencyContact, 'id'>;
 
 /**
- * Local entities the backend does not have yet: people, their device, emergency contacts, alert
- * acknowledgements, the alert journal and settings. Views reach it only through hooks, so a backend
- * implementation of this interface can replace the localStorage one without touching them.
- * Reads are synchronous snapshots; writes are async so a remote implementation fits the same shape.
+ * People, their device, emergency contacts, alert acknowledgements, the alert journal and settings.
+ * Views reach them only through hooks. Two implementations: localStorage (demo mode, or a backend
+ * without the care route) and the SoliCare server (`serverStore.ts`). Reads are synchronous snapshots;
+ * writes are async because a remote write can fail or be retried.
  */
 export interface CareRepository {
+  /** Where the data lives: this browser's localStorage, or the SoliCare server behind the panel key. */
+  readonly storage: 'local' | 'server';
   getSnapshot(): CareData;
   subscribe(listener: () => void): () => void;
   addPerson(input: PersonInput): Promise<Person>;
@@ -31,8 +33,12 @@ export interface CareRepository {
   restoreAlertAck(alertId: string, previous: AlertAck | undefined): Promise<void>;
   recordAlertEvents(entries: readonly AlertJournalEntry[]): Promise<void>;
   updateSettings(patch: Partial<Settings>): Promise<Settings>;
-  /** Deletes every local entity and returns to defaults. */
+  /** Deletes every entity and returns to defaults. */
   reset(): Promise<void>;
+  /** Server storage only: fetches the stored document so other panels' changes show up. Never rejects. */
+  refresh?(signal?: AbortSignal): Promise<void>;
+  /** Server storage only: calls the listener with a Spanish message whenever a change could not be saved. */
+  subscribeErrors?(listener: (message: string) => void): () => void;
 }
 
 /** A user-facing validation problem. `message` is Spanish UI copy. */
@@ -51,7 +57,8 @@ export const SETTINGS_LIMITS = {
   pollIntervalSeconds: { min: 5, max: 300 },
 } as const;
 
-const JOURNAL_LIMIT = 1000;
+/** Size limits of the care document. The backend (backend/src/care/document.ts) enforces the same numbers. */
+export const CARE_LIMITS = { people: 100, contactsPerPerson: 10, journalEntries: 1000, acknowledgements: 2000 } as const;
 
 /**
  * Polling faster than half the offline window keeps the data fresh enough that a gap between two
@@ -164,11 +171,261 @@ function requireText(value: string | undefined, field: string, message: string):
   return text;
 }
 
-function trimJournal(journal: Record<string, AlertJournalEntry>): Record<string, AlertJournalEntry> {
+export function trimJournal(journal: Record<string, AlertJournalEntry>): Record<string, AlertJournalEntry> {
   const entries = Object.values(journal);
-  if (entries.length <= JOURNAL_LIMIT) return journal;
+  if (entries.length <= CARE_LIMITS.journalEntries) return journal;
   entries.sort((a, b) => b.at.localeCompare(a.at));
-  return Object.fromEntries(entries.slice(0, JOURNAL_LIMIT).map((entry) => [entry.id, entry]));
+  return Object.fromEntries(entries.slice(0, CARE_LIMITS.journalEntries).map((entry) => [entry.id, entry]));
+}
+
+/** Keeps the most recently acted-on acknowledgements when there are more than the document allows. */
+export function trimAcknowledgements(acknowledgements: Record<string, AlertAck>): Record<string, AlertAck> {
+  const entries = Object.entries(acknowledgements);
+  if (entries.length <= CARE_LIMITS.acknowledgements) return acknowledgements;
+  const latest = ([, ack]: [string, AlertAck]) => ack.resolvedAt ?? ack.acknowledgedAt ?? '';
+  entries.sort((a, b) => latest(b).localeCompare(latest(a)));
+  return Object.fromEntries(entries.slice(0, CARE_LIMITS.acknowledgements));
+}
+
+/**
+ * A change to the document as a pure function: it gets the current document (and the stored version, 0
+ * when nothing was ever stored) and returns the next one plus a result for the caller. It throws
+ * `StoreValidationError` for a refused change and returns the same `data` object for "nothing to do".
+ * Backends differ only in how they apply an operation: the local one commits it, the server one re-applies
+ * it to a fresher document when another panel got there first. Anything random or time-based is fixed when
+ * the operation is built, so applying it twice gives the same entity.
+ */
+export type CareOp<R = void> = (data: CareData, version: number) => { data: CareData; result: R };
+
+const done = <R>(data: CareData, result: R) => ({ data, result });
+
+function personIndex(data: CareData, id: string): number {
+  const index = data.people.findIndex((person) => person.id === id);
+  if (index < 0) throw new StoreValidationError('id', 'Esta persona ya no existe.');
+  return index;
+}
+
+function checkDeviceFree(data: CareData, deviceId: string | null, exceptPersonId?: string) {
+  if (!deviceId) return;
+  const owner = data.people.find((person) => person.deviceId === deviceId && person.id !== exceptPersonId);
+  if (owner) throw new StoreValidationError('deviceId', `Este dispositivo ya está asignado a ${owner.name}.`);
+}
+
+function withAck(data: CareData, alertId: string, patch: AlertAck): CareData {
+  return {
+    ...data,
+    acknowledgements: trimAcknowledgements({ ...data.acknowledgements, [alertId]: { ...data.acknowledgements[alertId], ...patch } }),
+  };
+}
+
+const cleanNote = (note?: string) => (note && note.trim() ? note.trim() : undefined);
+
+export const careOps = {
+  addPerson(input: PersonInput): CareOp<Person> {
+    const id = newId();
+    const createdAt = new Date().toISOString();
+    return (data) => {
+      const name = requireText(input.name, 'name', 'Escriba el nombre de la persona.');
+      const deviceId = input.deviceId?.trim() || null;
+      checkDeviceFree(data, deviceId);
+      if (data.people.length >= CARE_LIMITS.people) {
+        throw new StoreValidationError('name', `Se alcanzó el máximo de ${CARE_LIMITS.people} personas.`);
+      }
+      const person: Person = { id, name, relation: input.relation.trim(), deviceId, contacts: [], createdAt };
+      return done({ ...data, people: [...data.people, person] }, person);
+    };
+  },
+
+  updatePerson(id: string, input: Partial<PersonInput>): CareOp<Person> {
+    return (data) => {
+      const index = personIndex(data, id);
+      const current = data.people[index];
+      const deviceId = input.deviceId === undefined ? current.deviceId : input.deviceId?.trim() || null;
+      checkDeviceFree(data, deviceId, id);
+      const next: Person = {
+        ...current,
+        name: input.name === undefined ? current.name : requireText(input.name, 'name', 'Escriba el nombre de la persona.'),
+        relation: input.relation === undefined ? current.relation : input.relation.trim(),
+        deviceId,
+      };
+      const people = data.people.slice();
+      people[index] = next;
+      return done({ ...data, people }, next);
+    };
+  },
+
+  assignDevice(deviceId: string, personId: string | null): CareOp {
+    return (data) => {
+      const id = deviceId.trim();
+      if (!id) throw new StoreValidationError('deviceId', 'Falta el dispositivo.');
+      const owner = data.people.find((person) => person.deviceId === id);
+      if ((owner?.id ?? null) === personId) return done(data, undefined);
+      if (personId !== null) {
+        const target = data.people.find((person) => person.id === personId);
+        if (!target) throw new StoreValidationError('personId', 'Esta persona ya no existe.');
+        if (target.deviceId) throw new StoreValidationError('personId', `${target.name} ya tiene el dispositivo ${target.deviceId}. Quítelo primero desde su detalle.`);
+      }
+      return done(
+        {
+          ...data,
+          people: data.people.map((person) => (person.id === owner?.id ? { ...person, deviceId: null } : person.id === personId ? { ...person, deviceId: id } : person)),
+        },
+        undefined,
+      );
+    };
+  },
+
+  removePerson(id: string): CareOp {
+    return (data) => {
+      personIndex(data, id);
+      return done({ ...data, people: data.people.filter((person) => person.id !== id) }, undefined);
+    };
+  },
+
+  addContact(personId: string, input: ContactInput): CareOp<EmergencyContact> {
+    const id = newId();
+    return (data) => {
+      const index = personIndex(data, personId);
+      const contact: EmergencyContact = {
+        id,
+        name: requireText(input.name, 'name', 'Escriba el nombre del contacto.'),
+        relation: input.relation.trim(),
+        phone: requireText(input.phone, 'phone', 'Escriba un número de teléfono.'),
+      };
+      if (data.people[index].contacts.length >= CARE_LIMITS.contactsPerPerson) {
+        throw new StoreValidationError('name', `Se alcanzó el máximo de ${CARE_LIMITS.contactsPerPerson} contactos por persona.`);
+      }
+      const people = data.people.slice();
+      people[index] = { ...people[index], contacts: [...people[index].contacts, contact] };
+      return done({ ...data, people }, contact);
+    };
+  },
+
+  updateContact(personId: string, contactId: string, input: Partial<ContactInput>): CareOp<EmergencyContact> {
+    return (data) => {
+      const index = personIndex(data, personId);
+      const person = data.people[index];
+      const current = person.contacts.find((contact) => contact.id === contactId);
+      if (!current) throw new StoreValidationError('id', 'Este contacto ya no existe.');
+      const next: EmergencyContact = {
+        ...current,
+        name: input.name === undefined ? current.name : requireText(input.name, 'name', 'Escriba el nombre del contacto.'),
+        relation: input.relation === undefined ? current.relation : input.relation.trim(),
+        phone: input.phone === undefined ? current.phone : requireText(input.phone, 'phone', 'Escriba un número de teléfono.'),
+      };
+      const people = data.people.slice();
+      people[index] = { ...person, contacts: person.contacts.map((contact) => (contact.id === contactId ? next : contact)) };
+      return done({ ...data, people }, next);
+    };
+  },
+
+  removeContact(personId: string, contactId: string): CareOp {
+    return (data) => {
+      const index = personIndex(data, personId);
+      const people = data.people.slice();
+      people[index] = { ...people[index], contacts: people[index].contacts.filter((contact) => contact.id !== contactId) };
+      return done({ ...data, people }, undefined);
+    };
+  },
+
+  acknowledgeAlert(alertId: string, note?: string): CareOp {
+    const at = new Date().toISOString();
+    return (data) => done(withAck(data, alertId, { acknowledgedAt: at, acknowledgeNote: cleanNote(note) }), undefined);
+  },
+
+  resolveAlert(alertId: string, note?: string): CareOp {
+    const at = new Date().toISOString();
+    return (data) => done(withAck(data, alertId, { resolvedAt: at, resolveNote: cleanNote(note) }), undefined);
+  },
+
+  restoreAlertAck(alertId: string, previous: AlertAck | undefined): CareOp {
+    return (data) => {
+      const acknowledgements = { ...data.acknowledgements };
+      if (previous) acknowledgements[alertId] = previous;
+      else delete acknowledgements[alertId];
+      return done({ ...data, acknowledgements }, undefined);
+    };
+  },
+
+  recordAlertEvents(entries: readonly AlertJournalEntry[]): CareOp {
+    return (data) => {
+      const fresh = entries.filter((entry) => !data.journal[entry.id]);
+      if (fresh.length === 0) return done(data, undefined);
+      const journal = { ...data.journal };
+      for (const entry of fresh) journal[entry.id] = entry;
+      const kept = trimJournal(journal);
+      // At the cap, a condition older than everything kept would be trimmed right away. Committing that
+      // changes nothing but would be derived as new again, so do not commit it.
+      if (!fresh.some((entry) => kept[entry.id])) return done(data, undefined);
+      return done({ ...data, journal: kept }, undefined);
+    };
+  },
+
+  updateSettings(patch: Partial<Settings>): CareOp<Settings> {
+    return (data) => {
+      const next = { ...data.settings, ...patch };
+      for (const field of Object.keys(SETTINGS_LIMITS) as (keyof Settings)[]) {
+        const { min, max } = SETTINGS_LIMITS[field];
+        const value = next[field];
+        if (!Number.isInteger(value) || value < min || value > max) {
+          throw new StoreValidationError(field, `Use un número entero entre ${min} y ${max}.`);
+        }
+      }
+      if (next.pollIntervalSeconds > maxPollSeconds(next.offlineWindowMinutes)) {
+        const max = maxPollSeconds(next.offlineWindowMinutes);
+        const field = patch.pollIntervalSeconds !== undefined ? 'pollIntervalSeconds' : 'offlineWindowMinutes';
+        throw new StoreValidationError(
+          field,
+          field === 'pollIntervalSeconds'
+            ? `Con ${next.offlineWindowMinutes} minutos sin reporte, use como máximo ${max} segundos entre actualizaciones.`
+            : `Con ${next.pollIntervalSeconds} segundos entre actualizaciones, use al menos ${Math.ceil(next.pollIntervalSeconds / 30)} minutos sin reporte.`,
+        );
+      }
+      return done({ ...data, settings: next }, next);
+    };
+  },
+
+  replaceAll(next: CareData): CareOp {
+    return () => done(next, undefined);
+  },
+};
+
+/** What a backend must provide to get the whole mutation surface of `CareRepository`. */
+export type ApplyOp = <R>(op: CareOp<R>, options?: { silent?: boolean }) => Promise<R>;
+
+type MutationMethods = Omit<CareRepository, 'storage' | 'getSnapshot' | 'subscribe' | 'refresh' | 'subscribeErrors'>;
+
+/** The mutation methods of `CareRepository`, shared by every backend: each one applies a pure `careOps` operation. */
+export function createMutations(apply: ApplyOp, seed?: () => CareData): MutationMethods {
+  return {
+    addPerson: (input) => apply(careOps.addPerson(input)),
+    updatePerson: (id, input) => apply(careOps.updatePerson(id, input)),
+    assignDevice: (deviceId, personId) => apply(careOps.assignDevice(deviceId, personId)),
+    removePerson: (id) => apply(careOps.removePerson(id)),
+    addContact: (personId, input) => apply(careOps.addContact(personId, input)),
+    updateContact: (personId, contactId, input) => apply(careOps.updateContact(personId, contactId, input)),
+    removeContact: (personId, contactId) => apply(careOps.removeContact(personId, contactId)),
+    acknowledgeAlert: (alertId, note) => apply(careOps.acknowledgeAlert(alertId, note)),
+    resolveAlert: (alertId, note) => apply(careOps.resolveAlert(alertId, note)),
+    restoreAlertAck: (alertId, previous) => apply(careOps.restoreAlertAck(alertId, previous)),
+    // A failed journal write is retried by the next derivation, so it must not raise a toast.
+    recordAlertEvents: (entries) => apply(careOps.recordAlertEvents(entries), { silent: true }),
+    updateSettings: (patch) => apply(careOps.updateSettings(patch)),
+    reset: () => apply(careOps.replaceAll(seed?.() ?? emptyCareData())),
+  };
+}
+
+/** Key of this browser's own care data, the one used before the server stored it. */
+export const LOCAL_CARE_KEY = 'solicare.care.v1';
+
+/** The care data kept in this browser under `key`, or null when there is none or it is unreadable. */
+export function readLocalCareData(key: string = LOCAL_CARE_KEY): CareData | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw === null ? null : parseCareData(JSON.parse(raw));
+  } catch {
+    return null;
+  }
 }
 
 /** localStorage implementation. `key` separates real data from demo data. */
@@ -209,24 +466,6 @@ export function createLocalCareRepository(key: string, seed?: () => CareData): C
     listeners.forEach((listener) => listener());
   }
 
-  function personIndex(id: string): number {
-    const index = data.people.findIndex((person) => person.id === id);
-    if (index < 0) throw new StoreValidationError('id', 'Esta persona ya no existe.');
-    return index;
-  }
-
-  function checkDeviceFree(deviceId: string | null, exceptPersonId?: string) {
-    if (!deviceId) return;
-    const owner = data.people.find((person) => person.deviceId === deviceId && person.id !== exceptPersonId);
-    if (owner) throw new StoreValidationError('deviceId', `Este dispositivo ya está asignado a ${owner.name}.`);
-  }
-
-  function setAck(alertId: string, patch: AlertAck) {
-    commit({ ...data, acknowledgements: { ...data.acknowledgements, [alertId]: { ...data.acknowledgements[alertId], ...patch } } });
-  }
-
-  const cleanNote = (note?: string) => (note && note.trim() ? note.trim() : undefined);
-
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', (event) => {
       if (event.key !== key) return;
@@ -235,151 +474,19 @@ export function createLocalCareRepository(key: string, seed?: () => CareData): C
     });
   }
 
+  const apply: ApplyOp = async (op) => {
+    const step = op(data, 1);
+    if (step.data !== data) commit(step.data);
+    return step.result;
+  };
+
   return {
+    storage: 'local',
     getSnapshot: () => data,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-
-    async addPerson(input) {
-      const name = requireText(input.name, 'name', 'Escriba el nombre de la persona.');
-      const deviceId = input.deviceId?.trim() || null;
-      checkDeviceFree(deviceId);
-      const person: Person = { id: newId(), name, relation: input.relation.trim(), deviceId, contacts: [], createdAt: new Date().toISOString() };
-      commit({ ...data, people: [...data.people, person] });
-      return person;
-    },
-
-    async updatePerson(id, input) {
-      const index = personIndex(id);
-      const current = data.people[index];
-      const deviceId = input.deviceId === undefined ? current.deviceId : input.deviceId?.trim() || null;
-      checkDeviceFree(deviceId, id);
-      const next: Person = {
-        ...current,
-        name: input.name === undefined ? current.name : requireText(input.name, 'name', 'Escriba el nombre de la persona.'),
-        relation: input.relation === undefined ? current.relation : input.relation.trim(),
-        deviceId,
-      };
-      const people = data.people.slice();
-      people[index] = next;
-      commit({ ...data, people });
-      return next;
-    },
-
-    async assignDevice(deviceId, personId) {
-      const id = deviceId.trim();
-      if (!id) throw new StoreValidationError('deviceId', 'Falta el dispositivo.');
-      const owner = data.people.find((person) => person.deviceId === id);
-      if (owner?.id === personId) return;
-      let target: Person | undefined;
-      if (personId !== null) {
-        target = data.people.find((person) => person.id === personId);
-        if (!target) throw new StoreValidationError('personId', 'Esta persona ya no existe.');
-        if (target.deviceId) throw new StoreValidationError('personId', `${target.name} ya tiene el dispositivo ${target.deviceId}. Quítelo primero desde su detalle.`);
-      }
-      commit({
-        ...data,
-        people: data.people.map((person) => (person.id === owner?.id ? { ...person, deviceId: null } : person.id === personId ? { ...person, deviceId: id } : person)),
-      });
-    },
-
-    async removePerson(id) {
-      personIndex(id);
-      commit({ ...data, people: data.people.filter((person) => person.id !== id) });
-    },
-
-    async addContact(personId, input) {
-      const index = personIndex(personId);
-      const contact: EmergencyContact = {
-        id: newId(),
-        name: requireText(input.name, 'name', 'Escriba el nombre del contacto.'),
-        relation: input.relation.trim(),
-        phone: requireText(input.phone, 'phone', 'Escriba un número de teléfono.'),
-      };
-      const people = data.people.slice();
-      people[index] = { ...people[index], contacts: [...people[index].contacts, contact] };
-      commit({ ...data, people });
-      return contact;
-    },
-
-    async updateContact(personId, contactId, input) {
-      const index = personIndex(personId);
-      const person = data.people[index];
-      const current = person.contacts.find((contact) => contact.id === contactId);
-      if (!current) throw new StoreValidationError('id', 'Este contacto ya no existe.');
-      const next: EmergencyContact = {
-        ...current,
-        name: input.name === undefined ? current.name : requireText(input.name, 'name', 'Escriba el nombre del contacto.'),
-        relation: input.relation === undefined ? current.relation : input.relation.trim(),
-        phone: input.phone === undefined ? current.phone : requireText(input.phone, 'phone', 'Escriba un número de teléfono.'),
-      };
-      const people = data.people.slice();
-      people[index] = { ...person, contacts: person.contacts.map((contact) => (contact.id === contactId ? next : contact)) };
-      commit({ ...data, people });
-      return next;
-    },
-
-    async removeContact(personId, contactId) {
-      const index = personIndex(personId);
-      const people = data.people.slice();
-      people[index] = { ...people[index], contacts: people[index].contacts.filter((contact) => contact.id !== contactId) };
-      commit({ ...data, people });
-    },
-
-    async acknowledgeAlert(alertId, note) {
-      setAck(alertId, { acknowledgedAt: new Date().toISOString(), acknowledgeNote: cleanNote(note) });
-    },
-
-    async resolveAlert(alertId, note) {
-      setAck(alertId, { resolvedAt: new Date().toISOString(), resolveNote: cleanNote(note) });
-    },
-
-    async restoreAlertAck(alertId, previous) {
-      const acknowledgements = { ...data.acknowledgements };
-      if (previous) acknowledgements[alertId] = previous;
-      else delete acknowledgements[alertId];
-      commit({ ...data, acknowledgements });
-    },
-
-    async recordAlertEvents(entries) {
-      const fresh = entries.filter((entry) => !data.journal[entry.id]);
-      if (fresh.length === 0) return;
-      const journal = { ...data.journal };
-      for (const entry of fresh) journal[entry.id] = entry;
-      const kept = trimJournal(journal);
-      // At the cap, a condition older than everything kept would be trimmed right away. Committing that
-      // changes nothing but would be derived as new again, so do not commit it.
-      if (!fresh.some((entry) => kept[entry.id])) return;
-      commit({ ...data, journal: kept });
-    },
-
-    async updateSettings(patch) {
-      const next = { ...data.settings, ...patch };
-      for (const field of Object.keys(SETTINGS_LIMITS) as (keyof Settings)[]) {
-        const { min, max } = SETTINGS_LIMITS[field];
-        const value = next[field];
-        if (!Number.isInteger(value) || value < min || value > max) {
-          throw new StoreValidationError(field, `Use un número entero entre ${min} y ${max}.`);
-        }
-      }
-      if (next.pollIntervalSeconds > maxPollSeconds(next.offlineWindowMinutes)) {
-        const max = maxPollSeconds(next.offlineWindowMinutes);
-        const field = patch.pollIntervalSeconds !== undefined ? 'pollIntervalSeconds' : 'offlineWindowMinutes';
-        throw new StoreValidationError(
-          field,
-          field === 'pollIntervalSeconds'
-            ? `Con ${next.offlineWindowMinutes} minutos sin reporte, use como máximo ${max} segundos entre actualizaciones.`
-            : `Con ${next.pollIntervalSeconds} segundos entre actualizaciones, use al menos ${Math.ceil(next.pollIntervalSeconds / 30)} minutos sin reporte.`,
-        );
-      }
-      commit({ ...data, settings: next });
-      return next;
-    },
-
-    async reset() {
-      commit(seed?.() ?? emptyCareData());
-    },
+    ...createMutations(apply, seed),
   };
 }

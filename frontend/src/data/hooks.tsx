@@ -94,6 +94,13 @@ export function DataProvider({ source, repository, children }: { source: Telemet
 
   const refresh = usePolling(load, care.settings.pollIntervalSeconds * 1000);
 
+  // Server storage: bring in what other panels changed, on the same interval and with the same pause
+  // while the tab is hidden. Local storage has nothing to fetch.
+  usePolling(
+    useCallback((signal: AbortSignal) => repository.refresh?.(signal) ?? Promise.resolve(), [repository]),
+    care.settings.pollIntervalSeconds * 1000,
+  );
+
   const telemetryValue = useMemo<TelemetryState>(() => ({ ...telemetry, source, refresh }), [telemetry, source, refresh]);
 
   // Alerts, statuses and "hace N min" ages are computed against this, not against the raw clock, so a
@@ -122,7 +129,8 @@ export function DataProvider({ source, repository, children }: { source: Telemet
   );
 
   useEffect(() => {
-    if (derivation.newJournalEntries.length > 0) void repository.recordAlertEvents(derivation.newJournalEntries);
+    // A failed write is silent: the entries are derived as new again and retried on the next update.
+    if (derivation.newJournalEntries.length > 0) repository.recordAlertEvents(derivation.newJournalEntries).catch(() => undefined);
   }, [derivation.newJournalEntries, repository]);
 
   const alertsValue = useMemo<AlertsValue>(() => {

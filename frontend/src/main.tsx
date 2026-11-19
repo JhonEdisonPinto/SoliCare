@@ -7,31 +7,56 @@ import './styles/tokens.css';
 import './styles/app.css';
 import './styles/views.css';
 import { DEMO_MODE, httpSource, setTelemetrySource, type TelemetrySource } from './data/api';
+import { connectCare, unlockWithKey } from './data/careBackend';
 import { createLocalCareRepository, type CareRepository } from './data/store';
 import { DataProvider } from './data/hooks';
+import { CareErrorToaster } from './components/CareErrorToaster';
+import { PanelKeyGate } from './components/PanelKeyGate';
 import { ToastProvider } from './components/Toast';
 import { router } from './app/router';
 
 async function start() {
   let source: TelemetrySource = httpSource;
-  let repository: CareRepository;
+  const root = createRoot(document.getElementById('root')!);
+
+  const mount = (repository: CareRepository) => {
+    root.render(
+      <StrictMode>
+        <DataProvider source={source} repository={repository}>
+          <ToastProvider>
+            <CareErrorToaster />
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </DataProvider>
+      </StrictMode>,
+    );
+  };
+
   if (DEMO_MODE) {
     // Only demo builds load the simulation; demo people live under their own storage key.
     const demo = await import('./data/demo');
     source = demo.demoSource;
-    repository = createLocalCareRepository('solicare.demo.care.v1', demo.demoSeed);
-  } else {
-    repository = createLocalCareRepository('solicare.care.v1');
+    setTelemetrySource(source);
+    mount(createLocalCareRepository('solicare.demo.care.v1', demo.demoSeed));
+    return;
   }
-  setTelemetrySource(source);
 
-  createRoot(document.getElementById('root')!).render(
+  setTelemetrySource(source);
+  const connection = await connectCare();
+  if (connection.kind === 'ready') {
+    mount(connection.repository);
+    return;
+  }
+  // The server asks for the panel key: nothing of the panel is shown until it is right.
+  const verify = async (key: string) => {
+    const result = await unlockWithKey(key);
+    if (!result.ok) return result.error;
+    mount(result.repository);
+    return null;
+  };
+  root.render(
     <StrictMode>
-      <DataProvider source={source} repository={repository}>
-        <ToastProvider>
-          <RouterProvider router={router} />
-        </ToastProvider>
-      </DataProvider>
+      <PanelKeyGate verify={verify} initialError={connection.hadKey ? 'La clave guardada ya no es válida. Escriba la clave actual del panel.' : undefined} />
     </StrictMode>,
   );
 }

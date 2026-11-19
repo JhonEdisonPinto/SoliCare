@@ -11,5 +11,7 @@ export const env = {
   port,
   databaseUrl: process.env.DATABASE_URL,
   deviceIngestToken: process.env.DEVICE_INGEST_TOKEN,
+  /** Key of the panel (the care data routes). Falls back to the device token while unset. */
+  panelToken: process.env.PANEL_TOKEN,
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
 };
