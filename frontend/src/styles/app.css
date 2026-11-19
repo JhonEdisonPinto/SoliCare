@@ -798,6 +798,14 @@ time,
   color: var(--en-linea);
 }
 
+.status--caida {
+  color: var(--caida);
+}
+
+.status--caida .status-glyph {
+  background: currentColor;
+}
+
 .status--en-linea .status-glyph {
   background: currentColor;
 }
@@ -835,10 +843,6 @@ time,
   color: var(--ink-2);
   font-size: var(--text-sm);
   font-weight: var(--weight-strong);
-}
-
-.row-flag--caida {
-  color: var(--caida);
 }
 
 .vital-value {

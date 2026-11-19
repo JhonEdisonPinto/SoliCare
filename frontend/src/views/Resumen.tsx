@@ -198,8 +198,7 @@ function PersonRow({ row, now, known }: { row: PersonSummary; now: number; known
         </span>
       </th>
       <td className="cell-status">
-        <StatusMarkFor status={status} lastSeenAt={device?.last_seen_at} known={known} now={now} />
-        {pendingFall ? <span className="row-flag row-flag--caida">Caída sin atender</span> : null}
+        <StatusMarkFor status={status} lastSeenAt={device?.last_seen_at} known={known} now={now} pendingFall={pendingFall} />
         {handledFall ? <span className="row-flag">Caída atendida</span> : null}
       </td>
       {rest}
@@ -263,12 +262,12 @@ export function Resumen() {
                   <th scope="col">Lectura</th>
                   <th scope="col" className="col-strip">
                     <span className="strip-head">
-                      <span className="axis-time" aria-hidden="true">
-                        {formatWhen(windowStartIso, now)}
+                      <span className="axis-time" aria-hidden="true" title={formatWhen(windowStartIso, now)}>
+                        hace 2 h
                       </span>
                       <span>Reportes últimas 2 h</span>
-                      <span className="axis-time" aria-hidden="true">
-                        {formatWhen(windowEndIso, now)}
+                      <span className="axis-time" aria-hidden="true" title={formatWhen(windowEndIso, now)}>
+                        ahora
                       </span>
                     </span>
                   </th>
