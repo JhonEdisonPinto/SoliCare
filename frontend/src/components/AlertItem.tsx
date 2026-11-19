@@ -110,14 +110,15 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
         )}
         {person?.relation ? <span className="event-relation">{person.relation}</span> : null}
       </span>
-      <span className="event-device">
-        <span className="visually-hidden">Dispositivo </span>
-        <Link to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>{alert.deviceId}</Link>
-      </span>
+      {person ? (
+        // Without a person the name already is "Dispositivo <id>", so the id is not repeated.
+        <span className="event-device">
+          <span className="visually-hidden">Dispositivo </span>
+          <Link to={`/dispositivos/${encodeURIComponent(alert.deviceId)}`}>{alert.deviceId}</Link>
+        </span>
+      ) : null}
       <span className="event-age">{timeAgo(alert.at, now)}</span>
       <div className="event-detail">
-        {!isFall ? <p>Sin reportes del dispositivo desde esa hora.</p> : null}
-        {pending ? <p>Pendiente: nadie la ha marcado como atendida.</p> : null}
         {alert.acknowledgedAt ? (
           <p>
             Atendida <When iso={alert.acknowledgedAt} now={now} />.

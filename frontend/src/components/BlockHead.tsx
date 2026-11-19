@@ -1,14 +1,15 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 /**
- * Explanation behind an "i" toggle instead of always-visible text.
- * Mouse hover or a click/tap opens it; Esc, a second click or a click outside closes it.
- * The text is also the button's accessible description, so screen readers hear it on focus.
+ * A block title with its explanation behind a small superscript "i".
+ * Hovering the title or the "i" with a mouse opens it, as does a click, tap or Enter on the "i";
+ * Esc, a click outside, or moving the mouse away closes it. The text is also the button's
+ * accessible description, so screen readers hear it on focus.
  */
-function InfoTip({ label, children }: { label: string; children: ReactNode }) {
+function TitleWithTip({ heading, label, children }: { heading: ReactNode; label: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const bubbleId = useId();
-  const wrap = useRef<HTMLSpanElement>(null);
+  const group = useRef<HTMLSpanElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
   const hovered = useRef(false);
 
@@ -31,7 +32,7 @@ function InfoTip({ label, children }: { label: string; children: ReactNode }) {
       if (event.key === 'Escape') setOpen(false);
     };
     const onPointer = (event: PointerEvent) => {
-      if (wrap.current && !wrap.current.contains(event.target as Node)) setOpen(false);
+      if (group.current && !group.current.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onPointer);
@@ -43,17 +44,19 @@ function InfoTip({ label, children }: { label: string; children: ReactNode }) {
 
   return (
     <span
-      ref={wrap}
-      className="info-tip"
+      ref={group}
+      className="block-title-group"
       onPointerEnter={(event) => event.pointerType === 'mouse' && hoverOpen()}
       onPointerLeave={(event) => event.pointerType === 'mouse' && hoverClose()}
     >
+      {heading}
       <button
         type="button"
         className="info-tip-button"
         aria-label={`Más información: ${label}`}
         aria-expanded={open}
         aria-describedby={bubbleId}
+        // A mouse click lands after hover already opened it: keep it open instead of toggling it shut.
         onClick={() => setOpen((value) => (hovered.current ? true : !value))}
       >
         i
@@ -65,15 +68,31 @@ function InfoTip({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** The ruled heading of a block: title, optional count of what it lists, optional explanation behind an "i" tooltip. */
+/**
+ * The ruled heading of a block: title, optional explanation behind a superscript "i", optional count.
+ * The count is read as part of the heading but drawn after the "i", so the "i" sits on the title's last letter.
+ */
 export function BlockHead({ id, title, count, children }: { id: string; title: string; count?: number; children?: ReactNode }) {
+  const heading = (
+    <h2 id={id} className="block-title">
+      {title}
+      {count !== undefined ? <span className="visually-hidden"> ({count})</span> : null}
+    </h2>
+  );
   return (
     <div className="block-head">
-      <h2 id={id} className="block-title">
-        {title}
-        {count !== undefined ? <span className="block-count">{count}</span> : null}
-      </h2>
-      {children ? <InfoTip label={title}>{children}</InfoTip> : null}
+      {children ? (
+        <TitleWithTip heading={heading} label={title}>
+          {children}
+        </TitleWithTip>
+      ) : (
+        heading
+      )}
+      {count !== undefined ? (
+        <span className="block-count" aria-hidden="true">
+          {count}
+        </span>
+      ) : null}
     </div>
   );
 }

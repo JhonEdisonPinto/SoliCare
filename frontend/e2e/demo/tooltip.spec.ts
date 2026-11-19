@@ -64,3 +64,28 @@ test('a mouse click after hovering keeps the tooltip open', async ({ page }) => 
   await page.mouse.move(0, 0);
   await expect(bubble).toBeHidden();
 });
+
+test('hovering the block title itself shows the explanation', async ({ page }) => {
+  await page.goto('/');
+  const bubble = page.getByRole('tooltip').filter({ hasText: NOTE });
+  await page.getByRole('heading', { name: /^Personas/ }).hover();
+  await expect(bubble).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(bubble).toBeHidden();
+});
+
+test('on a short page the footer sits at the bottom of the window', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto('/esta-ruta-no-existe');
+  const box = await page.getByRole('contentinfo').boundingBox();
+  expect(box).not.toBeNull();
+  expect(Math.round(box!.y + box!.height)).toBe(1000);
+});
+
+test('an open event row keeps only key facts', async ({ page }) => {
+  await page.goto('/');
+  const log = page.locator('.event-log').first();
+  await expect(log.getByText('Pendiente: nadie la ha marcado como atendida.')).toHaveCount(0);
+  await expect(log.getByText('Sin reportes del dispositivo desde esa hora.')).toHaveCount(0);
+  await expect(log.getByRole('link', { name: /Andrés Pérez/ })).toBeVisible();
+});
