@@ -18,7 +18,7 @@ function runsOf(bins: readonly StripBin[]): Run[] {
 }
 
 function summaryText(strip: ReturnType<typeof buildReportStrip>): string {
-  if (strip.reports === 0) return 'Sin reportes en las últimas 2 h';
+  if (strip.reports === 0) return 'Sin reportes';
   const parts: string[] = [];
   if (strip.gaps === 0) parts.push('Sin interrupciones');
   else if (strip.gaps === 1) parts.push(`1 interrupción de ${formatDuration(strip.longestGapMs)}`);
@@ -42,18 +42,20 @@ export const ReportStrip = memo(function ReportStrip({ readings, now, limit }: {
   const count = strip.bins.length;
   return (
     <div className="strip">
-      <div className="strip-bar" aria-hidden="true">
-        {runsOf(strip.bins).map((run) => (
-          <span
-            key={run.start}
-            className={`strip-run strip-run--${run.kind}`}
-            style={{ insetInlineStart: pct(run.start / count), inlineSize: pct(run.length / count) }}
-          />
-        ))}
-        {strip.falls.map((fall) => (
-          <span key={fall.at} className="strip-fall" style={{ insetInlineStart: pct(fall.position) }} />
-        ))}
-      </div>
+      {strip.reports > 0 ? (
+        <div className="strip-bar" aria-hidden="true">
+          {runsOf(strip.bins).map((run) => (
+            <span
+              key={run.start}
+              className={`strip-run strip-run--${run.kind}`}
+              style={{ insetInlineStart: pct(run.start / count), inlineSize: pct(run.length / count) }}
+            />
+          ))}
+          {strip.falls.map((fall) => (
+            <span key={fall.at} className="strip-fall" style={{ insetInlineStart: pct(fall.position) }} />
+          ))}
+        </div>
+      ) : null}
       <span className="strip-range" aria-hidden="true">
         <span>{formatWhen(new Date(strip.windowStart).toISOString(), now)}</span>
         <span>{formatWhen(new Date(strip.windowEnd).toISOString(), now)}</span>

@@ -262,7 +262,7 @@ export function Resumen() {
                   </th>
                   <th scope="col">Lectura</th>
                   <th scope="col" className="col-strip">
-                    Reportes, últimas 2 h
+                    Reportes últimas 2 h
                     <span className="axis" aria-hidden="true">
                       <span>{formatWhen(windowStartIso, now)}</span>
                       <span>{formatWhen(windowEndIso, now)}</span>

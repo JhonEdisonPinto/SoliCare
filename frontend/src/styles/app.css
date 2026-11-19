@@ -602,15 +602,10 @@ time,
   align-self: center;
 }
 
+/* An event from another day prints its date and clock time on one line. */
 .event-time {
   grid-area: time;
   font-weight: var(--weight-strong);
-}
-
-/* An event from another day stacks its date over the clock time, so the column keeps one width. */
-.event-day,
-.event-clock {
-  display: block;
   white-space: nowrap;
 }
 
@@ -700,7 +695,7 @@ time,
 
 @container (min-width: 48rem) {
   .event {
-    grid-template-columns: 9.5rem 6.5rem minmax(0, 1fr) 6rem 7.5rem auto;
+    grid-template-columns: 9.5rem 11rem minmax(0, 1fr) 6rem 7.5rem auto;
     grid-template-areas:
       'stamp time subject device age action'
       '. . detail detail detail action'
@@ -925,6 +920,21 @@ time,
 
   .people-table .cell-age {
     inline-size: 11.5rem;
+  }
+
+  .people-table .num,
+  .people-table .cell-age,
+  .people-table thead th:nth-child(5) {
+    text-align: center;
+  }
+
+  .people-table tbody .num,
+  .people-table tbody .cell-age {
+    vertical-align: middle;
+  }
+
+  .people-table .reading-age {
+    justify-items: center;
   }
 
   .device-table .device-id {

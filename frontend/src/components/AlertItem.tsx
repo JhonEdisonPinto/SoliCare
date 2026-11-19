@@ -95,7 +95,7 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
         <Stamp kind={stampKind}>{isFall ? 'Caída' : 'Sin reporte'}</Stamp>
       </span>
       <time className="event-time" dateTime={alert.at} title={formatFull(alert.at)}>
-        {when.day && <span className="event-day">{when.day}</span>}
+        {when.day && <span className="event-day">{when.day} </span>}
         <span className="event-clock">{when.time}</span>
       </time>
       <span className="event-subject">
