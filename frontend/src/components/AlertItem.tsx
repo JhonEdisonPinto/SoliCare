@@ -27,7 +27,7 @@ type Props = {
 /**
  * One alert as a card: icon, what happened, who and when, the state, and the single next action. An open
  * fall is the only card with a red tint; connection alerts are amber; resolved alerts stay readable but
- * offer no action. A simulated fall ("Simular caída") is labelled as such and offers no action either.
+ * offer no action. A simulated alert is labelled as such and offers no action either.
  */
 export function AlertItem({ alert, person, now, withNote = false, onActed }: Props) {
   const act = useAlertActions(alert);
@@ -87,7 +87,7 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
       </span>
       <div className="event-main">
         <div className="event-head">
-          <strong className="event-title">{isFall ? 'Caída' : 'Sin reporte'}</strong>
+          <strong className="event-title">{isFall ? 'Caída' : alert.simulated ? 'Ausencia' : 'Sin reporte'}</strong>
           <Pill tone={tone}>{stateLabel}</Pill>
           {alert.simulated ? <Pill tone="neutral">Simulación</Pill> : null}
         </div>
@@ -131,7 +131,7 @@ export function AlertItem({ alert, person, now, withNote = false, onActed }: Pro
               {alert.resolveNote ? <span className="event-note-text"> Nota: {alert.resolveNote}</span> : null}
             </p>
           ) : null}
-          {alert.simulated ? <p>Simulación: los avisos van al grupo de Telegram y la persona vuelve a estar bien en unos segundos.</p> : null}
+          {alert.simulated ? <p>Simulación: Soliker Bot atiende el caso en el grupo de Telegram y la alerta se cierra cuando termina.</p> : null}
         </div>
       </div>
       {!resolved && !alert.simulated ? (

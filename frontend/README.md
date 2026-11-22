@@ -25,14 +25,14 @@ Pulso y SpO2 se presentan como señales de seguimiento, no como un diagnóstico.
 Una lectura de `0` significa "sin lectura válida": nunca se dibuja ni se muestra
 como valor. Por ahora el panel no avisa a nadie de una caída real.
 
-El botón **Simular caída** del Resumen elige al azar a una persona en verde
-(dispositivo en línea y sin alertas abiertas) y le muestra una caída marcada como
-simulación durante unos 25 s; después vuelve a verde. Mientras tanto el backend
-envía al grupo de Telegram el aviso de caída, una «📞 [LLAMADA ENTRANTE]» por cada
-contacto de emergencia con teléfono (máximo tres) y un mensaje de cierre. La
-simulación no se guarda en ningún lado. En modo demostración, o si el backend no
-tiene Telegram configurado, solo se ve en el panel. Configuración del bot:
-`backend/README.md`.
+Los botones **Simular caída** y **Simular ausencia** del Resumen eligen al azar a
+una persona en verde (dispositivo en línea y sin alertas abiertas) y le muestran
+una alerta marcada como simulación mientras dura el caso, hasta unos 90 s; después
+vuelve a verde. Mientras tanto el backend reproduce en el grupo de Telegram un caso
+con guion del agente simulado Soliker Bot: de caída (C01 a C09) o de desconexión e
+inactividad (C10 a C12). La simulación no se guarda en ningún lado. En modo
+demostración, o si el backend no tiene Telegram configurado, solo se ve en el panel
+durante unos 25 s. Configuración del bot: `backend/README.md`.
 
 La persona mayor no necesita operar este panel ni usar una aplicación para que
 el dispositivo funcione.

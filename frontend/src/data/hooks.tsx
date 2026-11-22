@@ -4,7 +4,7 @@ import { ApiError } from './api';
 import type { CareRepository } from './store';
 import type { Alert, CareData, Device, DeviceStats, Reading } from './types';
 import { alertReferenceTime, compareAlerts, deriveAlerts, isOpen } from './alerts';
-import { requestSimulation, simulatedFall, type SimulationStart } from './simulation';
+import { requestSimulation, simulatedAlert, withSimulatedAway, type SimulationCategory, type SimulationStart } from './simulation';
 import { summarizeDevices, summarizePeople, unassignedDevices, type DeviceSummary, type PersonSummary } from './summary';
 import { usePolling } from './polling';
 
@@ -29,10 +29,10 @@ type TelemetryData = Omit<TelemetryState, 'source' | 'refresh'>;
 type AlertsValue = { alerts: Alert[]; open: Alert[]; pendingCount: number };
 
 export type SimulationValue = {
-  /** The simulated fall while one runs. */
+  /** The simulated alert while one runs. */
   active: Alert | null;
-  /** Shows a fall for this person at once and asks the server to send the Telegram messages. */
-  start: (personId: string, deviceId: string) => Promise<SimulationStart>;
+  /** Shows the alert for this person at once and asks the server to play a case of the category in Telegram. */
+  start: (personId: string, deviceId: string, category?: SimulationCategory) => Promise<SimulationStart>;
 };
 
 type ActiveSimulation = { alert: Alert; endsAt: number };
@@ -153,12 +153,12 @@ export function DataProvider({ source, repository, children }: { source: Telemet
     return () => clearTimeout(timer);
   }, [simulation]);
 
-  const startSimulation = useCallback(async (personId: string, deviceId: string) => {
+  const startSimulation = useCallback(async (personId: string, deviceId: string, category: SimulationCategory = 'caida') => {
     const startedAt = Date.now();
-    const alert = simulatedFall(personId, deviceId, startedAt);
+    const alert = simulatedAlert(category, personId, deviceId, startedAt);
     const pending: ActiveSimulation = { alert, endsAt: Number.POSITIVE_INFINITY };
     setSimulation(pending);
-    const result = await requestSimulation(personId);
+    const result = await requestSimulation(personId, category);
     setSimulation((current) => (current === pending ? { alert, endsAt: startedAt + result.durationMs } : current));
     return result;
   }, []);
@@ -166,7 +166,7 @@ export function DataProvider({ source, repository, children }: { source: Telemet
   const simulationValue = useMemo<SimulationValue>(() => ({ active: simulation?.alert ?? null, start: startSimulation }), [simulation, startSimulation]);
 
   const alertsValue = useMemo<AlertsValue>(() => {
-    // The simulated fall joins the derived alerts only here, so every view shows it and nothing stores it.
+    // The simulated alert joins the derived alerts only here, so every view shows it and nothing stores it.
     const alerts = simulation ? [simulation.alert, ...derivation.alerts].sort(compareAlerts) : derivation.alerts;
     const open = alerts.filter(isOpen);
     return { alerts, open, pendingCount: open.filter((alert) => alert.state === 'pendiente').length };
@@ -222,7 +222,7 @@ export function useAlerts(): AlertsValue {
   return required(useContext(AlertsContext), 'useAlerts');
 }
 
-/** The fall simulation: the simulated alert while one runs, and how to start one. */
+/** The simulation: the simulated alert while one runs, and how to start one. */
 export function useSimulation(): SimulationValue {
   return required(useContext(SimulationContext), 'useSimulation');
 }
@@ -235,7 +235,7 @@ export function usePeopleSummary(): { people: PersonSummary[]; unassigned: Devic
   const now = useReferenceNow();
   return useMemo(
     () => ({
-      people: summarizePeople(people, devices, readingsByDevice, alerts, now, settings.offlineWindowMinutes),
+      people: withSimulatedAway(summarizePeople(people, devices, readingsByDevice, alerts, now, settings.offlineWindowMinutes)),
       unassigned: unassignedDevices(people, devices),
     }),
     [people, devices, readingsByDevice, alerts, now, settings.offlineWindowMinutes],
@@ -249,7 +249,7 @@ export function useDeviceSummaries(): DeviceSummary[] {
   const { alerts } = useAlerts();
   const now = useReferenceNow();
   return useMemo(
-    () => summarizeDevices(devices, people, readingsByDevice, alerts, now, settings.offlineWindowMinutes),
+    () => withSimulatedAway(summarizeDevices(devices, people, readingsByDevice, alerts, now, settings.offlineWindowMinutes)),
     [devices, people, readingsByDevice, alerts, now, settings.offlineWindowMinutes],
   );
 }

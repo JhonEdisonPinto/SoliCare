@@ -7,6 +7,7 @@ import {
   Plus,
   ShieldCheck,
   Siren,
+  UserX,
   UsersRound,
   Wifi,
   WifiOff,
@@ -24,7 +25,7 @@ import { useAlertActions } from '../components/useAlertActions';
 import { VitalsCard } from '../components/VitalsCard';
 import { recentActivity, responseStats, type ActivityKind } from '../data/dashboard';
 import { useAlerts, useCare, useDeviceSummaries, useNow, usePeopleSummary, useReferenceNow, useSimulation, useTelemetry } from '../data/hooks';
-import { simulationCandidates, type TelegramOutcome } from '../data/simulation';
+import { simulationCandidates, type SimulationCategory, type TelegramOutcome } from '../data/simulation';
 import type { PersonSummary } from '../data/summary';
 import type { Alert, Person } from '../data/types';
 import { avatarTone, initials } from '../lib/people';
@@ -115,8 +116,12 @@ function AlertBanner({ alert, others, onDismiss, now }: { alert: Alert; others: 
       </>
     );
   } else {
-    title = 'Revisa una conexión';
-    message = (
+    title = alert.simulated ? 'Persona sin señales' : 'Revisa una conexión';
+    message = alert.simulated ? (
+      <>
+        Simulación: <b>{name}</b> no da señales de actividad.
+      </>
+    ) : (
       <>
         El dispositivo de <b>{person ? person.name : alert.deviceId}</b> no reporta datos {timeAgo(alert.at, now).replace('hace', 'desde hace')}.
       </>
@@ -167,8 +172,14 @@ const SIMULATION_TOAST: Record<TelegramOutcome, string> = {
   ocupado: 'Ya hay una simulación en curso desde otro panel; Telegram no se avisó otra vez.',
 };
 
-/** Picks a person who is green right now and simulates a fall for them; they go back to green on their own. */
-function SimulateButton({ rows }: { rows: PersonSummary[] }) {
+const SIMULATE: Record<SimulationCategory, { label: string; icon: LucideIcon; alertKind: Alert['kind'] }> = {
+  caida: { label: 'Simular caída', icon: Siren, alertKind: 'caida' },
+  ausencia: { label: 'Simular ausencia', icon: UserX, alertKind: 'conexion' },
+};
+
+/** Picks a person who is green right now and plays a case of the category; they go back to green on their own. */
+function SimulateButton({ rows, category }: { rows: PersonSummary[]; category: SimulationCategory }) {
+  const { label, icon: Icon, alertKind } = SIMULATE[category];
   const { active, start } = useSimulation();
   const toast = useToast();
   const run = async () => {
@@ -179,13 +190,13 @@ function SimulateButton({ rows }: { rows: PersonSummary[] }) {
       return;
     }
     const row = candidates[Math.floor(Math.random() * candidates.length)];
-    const result = await start(row.person.id, row.person.deviceId as string);
-    toast({ text: SIMULATION_TOAST[result.telegram] });
+    const result = await start(row.person.id, row.person.deviceId as string, category);
+    toast({ text: `${result.caseId ? `Caso #${result.caseId}. ` : ''}${SIMULATION_TOAST[result.telegram]}` });
   };
   return (
     // aria-disabled rather than disabled, so keyboard focus stays on the button while the simulation runs.
     <button type="button" className="btn btn--outline" aria-disabled={active !== null} onClick={() => void run()}>
-      <Siren size={18} aria-hidden="true" /> {active ? 'Simulación en curso…' : 'Simular caída'}
+      <Icon size={18} aria-hidden="true" /> {active?.kind === alertKind ? 'Simulación en curso…' : label}
     </button>
   );
 }
@@ -378,7 +389,8 @@ export function Resumen() {
           </>
         }
       >
-        <SimulateButton rows={summary.people} />
+        <SimulateButton rows={summary.people} category="caida" />
+        <SimulateButton rows={summary.people} category="ausencia" />
         <Link className="btn btn--primary" to="/personas?agregar=1">
           <Plus size={18} aria-hidden="true" /> Añadir persona
         </Link>

@@ -83,7 +83,7 @@ export function FallPanel({ row, now }: { row: PersonSummary | undefined; now: n
         </div>
       </div>
       <p className="fall-note">
-        <AlertTriangle size={13} aria-hidden="true" /> Por ahora SoliCare no avisa a nadie de una caída real. «Simular caída» envía un aviso de prueba al grupo de Telegram.
+        <AlertTriangle size={13} aria-hidden="true" /> Por ahora SoliCare no avisa a nadie de una caída real. «Simular caída» y «Simular ausencia» reproducen un caso de prueba en el grupo de Telegram.
       </p>
     </section>
   );

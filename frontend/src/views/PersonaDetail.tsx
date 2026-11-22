@@ -112,7 +112,7 @@ function ContactsBlock({ person }: { person: Person }) {
         kicker="Emergencias"
         title="Contactos que serán notificados"
         count={person.contacts.length}
-        note="Por ahora SoliCare no avisa a estos contactos de una caída real. En «Simular caída» los tres primeros con teléfono reciben una llamada simulada en el grupo de Telegram."
+        note="Por ahora SoliCare no avisa a estos contactos de una caída real. En las simulaciones, los tres primeros con teléfono aparecen como contactos del caso en el grupo de Telegram."
         actions={
           <button ref={addKey} type="button" className="btn btn--outline" aria-expanded={editing === 'new'} onClick={() => setEditing(editing === 'new' ? null : 'new')}>
             <Plus size={16} aria-hidden="true" /> Añadir contacto

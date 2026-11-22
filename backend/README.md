@@ -50,14 +50,21 @@ Health check path: /health
 
 Agrega las variables de `backend/.env.example` en App Platform como secretos.
 
-## Simulación de caídas por Telegram
+## Simulación del agente Soliker Bot por Telegram
 
-`POST /api/v1/simulation/fall` con `{ "personId": "..." }` (clave del panel)
-envía al grupo de Telegram la secuencia de una caída simulada: aviso, una
-«📞 [LLAMADA ENTRANTE]» por cada contacto de emergencia con teléfono (máximo
-tres; si no hay, a la central) y el mensaje de cierre a los 25 s. No guarda nada
-y atiende una simulación a la vez (`409` mientras otra está en curso). El panel
-la lanza con el botón **Simular caída** del Resumen.
+`POST /api/v1/simulation/fall` y `POST /api/v1/simulation/away`, con
+`{ "personId": "..." }` (clave del panel), sortean según su peso un caso con guion
+y lo reproducen mensaje por mensaje en el grupo de Telegram: `fall` elige entre
+C01 y C09, y `away` entre C10 y C12 (desconexión o inactividad). Soliker Bot no es
+una IA real y no se contacta a nadie fuera del grupo. Los mensajes salen cada
+3,2 s para respetar el límite de Telegram de 20 por minuto en un grupo, así que un
+caso dura hasta unos 90 s. No guarda nada y atiende una simulación a la vez (`409`
+mientras otra está en curso). El panel las lanza con los botones **Simular caída**
+y **Simular ausencia** del Resumen.
+
+Los guiones, los pesos y los datos por defecto (edad, dirección y contactos que
+falten) están en `src/services/simulationCases.ts`. El nombre de la persona y sus
+tres primeros contactos con teléfono salen del panel.
 
 Sin `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` la simulación sigue funcionando en
 pantalla y no envía mensajes. Para activarla:

@@ -104,7 +104,7 @@ export type Alert = {
   resolveNote?: string;
   /** "datos": the device reported again. "usuario": someone marked it as resolved. */
   resolvedBy?: 'datos' | 'usuario';
-  /** A fall from "Simular caída": shown while the simulation runs, never stored and never acted on. */
+  /** From "Simular caída" or "Simular ausencia": shown while the simulation runs, never stored and never acted on. */
   simulated?: boolean;
 };
 

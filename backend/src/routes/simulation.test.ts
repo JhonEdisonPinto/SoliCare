@@ -4,7 +4,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { createPanelAuth } from '../auth/panelAuth.js';
 import { emptyCareData, type Person } from '../care/document.js';
 import type { CareStore } from '../care/store.js';
-import { SIMULATION_DURATION_MS, simulationMessages } from '../services/simulation.js';
+import { caseMessages, pickSimulationCase, SIMULATION_MESSAGE_GAP_MS } from '../services/simulation.js';
+import { SIMULATION_CASES } from '../services/simulationCases.js';
 import { createTelegramNotify } from '../services/telegram.js';
 import { registerSimulationRoutes } from './simulation.js';
 
@@ -30,36 +31,56 @@ const storeWith = (people: Person[]): CareStore => ({
   },
 });
 
-describe('simulationMessages', () => {
-  test('fall notice, one call per contact with a phone (max 3), then the closing message', () => {
-    const contacts = [
-      { id: 'a', name: 'Ana', relation: 'Hija', phone: '300 111' },
-      { id: 'b', name: 'Sin teléfono', relation: '', phone: ' ' },
-      { id: 'c', name: 'Carlos', relation: '', phone: '300 222' },
-      { id: 'd', name: 'Diana', relation: 'Vecina', phone: '300 333' },
-      { id: 'e', name: 'Eva', relation: '', phone: '300 444' },
-    ];
-    const steps = simulationMessages(person('p1', { contacts }), AT);
-    assert.equal(steps.length, 5);
-    assert.match(steps[0].text, /^🚨 \[SIMULACIÓN\] Caída detectada\n👤 Rosa Pérez \(Mamá\)\n📟 Dispositivo esp32-01\n🕒 10:03/);
-    assert.deepEqual(
-      steps.slice(1, 4).map((step) => step.text.split('\n').slice(0, 2)),
-      [
-        ['📞 [LLAMADA ENTRANTE]', 'Para: Ana (Hija) · 300 111'],
-        ['📞 [LLAMADA ENTRANTE]', 'Para: Carlos · 300 222'],
-        ['📞 [LLAMADA ENTRANTE]', 'Para: Diana (Vecina) · 300 333'],
-      ],
-    );
-    assert.equal(steps[4].text, '✅ [SIMULACIÓN] Rosa Pérez está bien. Fin de la simulación.');
-    assert.equal(steps[4].delayMs, SIMULATION_DURATION_MS);
-    const delays = steps.map((step) => step.delayMs);
-    assert.deepEqual(delays, [...delays].sort((a, b) => a - b));
+const CONTACTS = [
+  { id: 'a', name: 'Ana', relation: 'Hija', phone: '300 111' },
+  { id: 'b', name: 'Sin teléfono', relation: '', phone: ' ' },
+  { id: 'c', name: 'Carlos', relation: '', phone: '300 222' },
+];
+
+describe('Soliker Bot cases', () => {
+  test('12 cases with the specified ids, categories and weights', () => {
+    assert.deepEqual(SIMULATION_CASES.map((item) => item.id), Array.from({ length: 12 }, (_, index) => `C${String(index + 1).padStart(2, '0')}`));
+    const weight = (category: string) => SIMULATION_CASES.filter((item) => item.category === category).reduce((total, item) => total + item.weight, 0);
+    assert.equal(weight('caida'), 80);
+    assert.equal(weight('ausencia'), 20);
+    assert.deepEqual(SIMULATION_CASES.filter((item) => item.category === 'ausencia').map((item) => item.id), ['C10', 'C11', 'C12']);
   });
 
-  test('without contacts the call goes to the monitoring centre', () => {
-    const steps = simulationMessages(person('p1'), AT);
-    assert.equal(steps.length, 3);
-    assert.match(steps[1].text, /Para: Central de monitoreo SoliCare/);
+  test('the draw follows the weights and never leaves the category', () => {
+    assert.equal(pickSimulationCase('caida', () => 0).id, 'C01');
+    assert.equal(pickSimulationCase('caida', () => 0.999).id, 'C09');
+    assert.equal(pickSimulationCase('ausencia', () => 0).id, 'C10');
+    assert.equal(pickSimulationCase('ausencia', () => 7.5 / 20).id, 'C11');
+    assert.equal(pickSimulationCase('ausencia', () => 0.999).id, 'C12');
+  });
+
+  for (const item of SIMULATION_CASES) {
+    test(`${item.id}: demo notice first, closing last, ordered time, no loose placeholder, 123 labelled`, () => {
+      const steps = caseMessages(item, person('p1', { contacts: CONTACTS }), AT);
+      assert.match(steps[0].text, new RegExp(`MODO DEMO – simulación, no se envía nada real\\. Caso #${item.id}`));
+      assert.match(steps.at(-1)!.text, new RegExp(`Registro\\nCaso: #${item.id}`));
+      assert.ok(steps.some((step) => step.text.includes(`Caso #${item.id} cerrado. Estado final: `)));
+      assert.ok(steps.length <= 37, 'stays within 120 s, the longest duration the panel accepts');
+      steps.forEach((step, index) => assert.equal(step.delayMs, index * SIMULATION_MESSAGE_GAP_MS));
+      const times = steps.map((step) => /\[T\+(\d\d:\d\d)\]/.exec(step.text)![1]);
+      for (const step of steps) assert.doesNotMatch(step.text, /\{\w+\}/);
+      assert.deepEqual(times, [...times].sort(), 'simulated time never goes back');
+      for (const step of steps.filter((candidate) => candidate.text.includes('Línea 123'))) assert.match(step.text, /\(SIMULADO\)/);
+    });
+  }
+
+  test('uses the panel person and contacts, and completes missing contacts with the defaults', () => {
+    const text = caseMessages(SIMULATION_CASES[4], person('p1', { contacts: CONTACTS }), AT).map((step) => step.text).join('\n');
+    assert.match(text, /Posible caída detectada – Rosa Pérez – en casa/);
+    assert.match(text, /Enviando alerta simultánea a 3 contactos: Ana \(Hija\), Carlos, Laura \(hija\)\./);
+    assert.doesNotMatch(text, /Don Jorge|Sin teléfono/);
+  });
+
+  test('cases without contact involvement send them no final update', () => {
+    for (const id of ['C01', 'C12']) {
+      const item = SIMULATION_CASES.find((candidate) => candidate.id === id)!;
+      assert.ok(!caseMessages(item, person('p1'), AT).some((step) => step.text.includes('Actualización final')));
+    }
   });
 });
 
@@ -83,14 +104,18 @@ describe('simulation route', () => {
         : null,
       schedule: (task, delayMs) => void tasks.push({ task, delayMs }),
       now: () => new Date(clock),
+      random: () => 0,
     });
   };
-  const start = (personId: unknown, headers: Record<string, string> = KEY) =>
-    app.inject({ method: 'POST', url: '/api/v1/simulation/fall', headers, payload: { personId } });
+  const start = (personId: unknown, headers: Record<string, string> = KEY, path = 'fall') =>
+    app.inject({ method: 'POST', url: `/api/v1/simulation/${path}`, headers, payload: { personId } });
   const runTasks = async () => {
-    for (const { task } of tasks.sort((a, b) => a.delayMs - b.delayMs)) task();
-    tasks = [];
-    await new Promise((resolve) => setImmediate(resolve));
+    while (tasks.length > 0) {
+      const batch = tasks.sort((a, b) => a.delayMs - b.delayMs);
+      tasks = [];
+      for (const { task } of batch) task();
+      await new Promise((resolve) => setImmediate(resolve));
+    }
   };
 
   beforeEach(() => {
@@ -103,40 +128,62 @@ describe('simulation route', () => {
 
   test('401 without the panel key, 400 without a person id, 404 for an unknown person or one without a device', async () => {
     await build();
-    assert.equal((await start('p1', {})).statusCode, 401);
-    assert.equal((await start(42)).statusCode, 400);
-    assert.equal((await start('nobody')).statusCode, 404);
-    assert.equal((await start('p2')).statusCode, 404);
+    for (const path of ['fall', 'away']) {
+      assert.equal((await start('p1', {}, path)).statusCode, 401);
+      assert.equal((await start(42, KEY, path)).statusCode, 400);
+      assert.equal((await start('nobody', KEY, path)).statusCode, 404);
+      assert.equal((await start('p2', KEY, path)).statusCode, 404);
+    }
     assert.deepEqual(sent, []);
   });
 
-  test('sends the fall notice at once and the rest on schedule, in order', async () => {
+  test('each button plays a case of its category, all messages in order', async () => {
     await build();
-    const response = await start('p1');
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), { durationMs: SIMULATION_DURATION_MS, telegram: 'enviado' });
+    const fall = await start('p1');
+    assert.equal(fall.statusCode, 200);
+    assert.equal(fall.json().caseId, 'C01');
+    assert.equal(fall.json().telegram, 'enviado');
     assert.equal(sent.length, 1);
-    assert.match(sent[0], /Caída detectada/);
+    assert.match(sent[0], /MODO DEMO/);
     await runTasks();
-    assert.equal(sent.length, 3);
-    assert.match(sent[1], /^📞 \[LLAMADA ENTRANTE\]\nPara: Ana \(Hija\) · 300/);
-    assert.match(sent[2], /está bien/);
+    const expected = caseMessages(SIMULATION_CASES[0], person('p1', { contacts: [{ id: 'a', name: 'Ana', relation: 'Hija', phone: '300' }] }), AT).map((step) => step.text);
+    assert.deepEqual(sent, expected);
+
+    sent = [];
+    const away = await start('p1', KEY, 'away');
+    assert.equal(away.json().caseId, 'C10');
+    await runTasks();
+    assert.match(sent.at(-1)!, /Caso: #C10/);
   });
 
-  test('one simulation at a time: 409 until it ends', async () => {
+  test('one simulation at a time across both buttons: 409 until it ends', async () => {
     await build();
-    assert.equal((await start('p1')).statusCode, 200);
+    const first = await start('p1');
+    assert.equal(first.statusCode, 200);
     clock += 1_000;
-    const busy = await start('p1');
+    const busy = await start('p1', KEY, 'away');
     assert.equal(busy.statusCode, 409);
-    assert.equal(busy.json().remainingMs, SIMULATION_DURATION_MS - 1_000);
+    assert.equal(busy.json().remainingMs, first.json().durationMs - 1_000);
     await runTasks();
     assert.equal((await start('p1')).statusCode, 200);
+  });
+
+  test('a message that fails does not stop the following ones', async () => {
+    await build();
+    await start('p1');
+    failSend = true;
+    tasks.shift()!.task();
+    await new Promise((resolve) => setImmediate(resolve));
+    failSend = false;
+    await runTasks();
+    assert.match(sent.at(-1)!, /Registro/);
   });
 
   test('without Telegram the simulation still starts; a failed first message is reported and stops the rest', async () => {
     await build(false);
-    assert.deepEqual((await start('p1')).json(), { durationMs: SIMULATION_DURATION_MS, telegram: 'sin-configurar' });
+    const offline = (await start('p1')).json();
+    assert.equal(offline.telegram, 'sin-configurar');
+    assert.ok(offline.durationMs > 0);
     await app.close();
     tasks = [];
     await build();
