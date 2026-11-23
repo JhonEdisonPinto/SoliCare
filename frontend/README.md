@@ -26,9 +26,10 @@ Una lectura de `0` significa "sin lectura válida": nunca se dibuja ni se muestr
 como valor. Por ahora el panel no avisa a nadie de una caída real.
 
 Los botones **Simular caída** y **Simular ausencia** del Resumen eligen al azar a
-una persona en verde (dispositivo en línea y sin alertas abiertas) y le muestran
-una alerta marcada como simulación mientras dura el caso, hasta unos 90 s; después
-vuelve a verde. Mientras tanto el backend reproduce en el grupo de Telegram un caso
+una persona en verde (dispositivo en línea y sin alertas abiertas) o, si no hay
+ninguna, a cualquier persona con dispositivo. Le muestran una alerta marcada como
+simulación mientras dura el caso, hasta unos 90 s; después vuelve a su estado
+anterior. Mientras tanto el backend reproduce en el grupo de Telegram un caso
 con guion del agente simulado Soliker Bot: de caída (C01 a C09) o de desconexión e
 inactividad (C10 a C12). La simulación no se guarda en ningún lado. En modo
 demostración, o si el backend no tiene Telegram configurado, solo se ve en el panel

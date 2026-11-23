@@ -19,9 +19,11 @@ export type TelegramOutcome = 'enviado' | 'sin-configurar' | 'error' | 'demo' | 
 
 export type SimulationStart = { durationMs: number; telegram: TelegramOutcome; caseId?: string };
 
-/** People who are green right now: a device that reports on time and no open alert. */
+/** Who a simulation can use: people who are green right now or, when nobody is, anyone with a device. */
 export function simulationCandidates(rows: readonly PersonSummary[]): PersonSummary[] {
-  return rows.filter((row) => row.person.deviceId && row.status === 'en-linea' && row.openAlerts.length === 0);
+  const withDevice = rows.filter((row) => row.person.deviceId);
+  const green = withDevice.filter((row) => row.status === 'en-linea' && row.openAlerts.length === 0);
+  return green.length > 0 ? green : withDevice;
 }
 
 /** The open alert shown while a simulation runs. It lives only in memory: no journal entry, no acknowledgement. */

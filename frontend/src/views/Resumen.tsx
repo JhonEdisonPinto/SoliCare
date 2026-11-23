@@ -177,7 +177,7 @@ const SIMULATE: Record<SimulationCategory, { label: string; icon: LucideIcon; al
   ausencia: { label: 'Simular ausencia', icon: UserX, alertKind: 'conexion' },
 };
 
-/** Picks a person who is green right now and plays a case of the category; they go back to green on their own. */
+/** Picks a green person, or anyone with a device when nobody is green, and plays a case of the category. */
 function SimulateButton({ rows, category }: { rows: PersonSummary[]; category: SimulationCategory }) {
   const { label, icon: Icon, alertKind } = SIMULATE[category];
   const { active, start } = useSimulation();
@@ -186,7 +186,7 @@ function SimulateButton({ rows, category }: { rows: PersonSummary[]; category: S
     if (active) return;
     const candidates = simulationCandidates(rows);
     if (candidates.length === 0) {
-      toast({ text: 'No hay nadie en verde para simular: hace falta una persona con su dispositivo en línea y sin alertas abiertas.' });
+      toast({ text: 'No hay a quién simular: asigna un dispositivo a una persona.' });
       return;
     }
     const row = candidates[Math.floor(Math.random() * candidates.length)];
