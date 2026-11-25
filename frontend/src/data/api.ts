@@ -26,8 +26,6 @@ export class ApiError extends Error {
 
 export const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:8080').replace(/\/$/, '');
 
-export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
-
 function isDevice(value: unknown): value is Device {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
@@ -100,7 +98,7 @@ export const httpSource: TelemetrySource = {
 
 let activeSource: TelemetrySource = httpSource;
 
-/** Called once at startup when demo mode is on. */
+/** Called once at startup with the source the data mode picked. */
 export function setTelemetrySource(source: TelemetrySource) {
   activeSource = source;
 }

@@ -1,5 +1,5 @@
 /**
- * Demo mode (VITE_DEMO_MODE=true only). A deterministic simulation with the same shapes as the API,
+ * Demo mode (simulated data, see dataMode.ts). A deterministic simulation with the same shapes as the API,
  * plus seed people for the separate demo store. Loaded through a dynamic import in main.tsx.
  */
 import type { TelemetrySource } from './api';

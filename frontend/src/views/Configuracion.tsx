@@ -177,7 +177,9 @@ export function Configuracion() {
         <dl className="facts">
           <div className="fact">
             <dt>Lecturas y dispositivos</dt>
-            <dd>{demo ? 'Modo demostración: datos simulados que no vienen del servidor.' : `Servidor de SoliCare en ${source.origin}.`}</dd>
+            <dd>
+              {demo ? 'Modo demostración: datos simulados que no vienen del servidor.' : `Lo que envían los dispositivos al servidor de SoliCare en ${source.origin}.`} Se cambia con el interruptor "Datos reales" de la barra superior.
+            </dd>
           </div>
           <div className="fact">
             <dt>Personas, contactos y alertas</dt>

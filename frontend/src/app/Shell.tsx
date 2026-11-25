@@ -1,6 +1,7 @@
 import { Bell, ChevronRight, HeartPulse, LayoutDashboard, Menu, PanelLeftClose, Settings, Smartphone, UsersRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
+import { DATA_MODE, switchDataMode } from '../data/dataMode';
 import { useAlerts, useCare, useTelemetry } from '../data/hooks';
 
 /** Where the data comes from, stated in the top bar: simulation, live server, or no connection. */
@@ -28,6 +29,19 @@ function SourceStatus() {
       <span className="status-long">{long}</span>
       <span className="status-short">{short}</span>
     </div>
+  );
+}
+
+/** "Datos reales": off shows the simulation, on shows what the devices send to the server. Changing it reloads the page. */
+function DataModeSwitch() {
+  const live = DATA_MODE === 'live';
+  return (
+    <button type="button" role="switch" aria-checked={live} className="data-switch" onClick={() => switchDataMode(live ? 'demo' : 'live')}>
+      <span className="data-switch-track" aria-hidden="true">
+        <span className="data-switch-thumb" />
+      </span>
+      <span className="data-switch-label">Datos reales</span>
+    </button>
   );
 }
 
@@ -230,6 +244,7 @@ export function Shell() {
           </nav>
           <div className="topbar-actions">
             <SourceStatus />
+            <DataModeSwitch />
             <Link to="/alertas" className="icon-button" aria-label={bellLabel}>
               <Bell size={19} aria-hidden="true" />
               {pendingCount > 0 ? <span className="bell-dot" aria-hidden="true" /> : null}

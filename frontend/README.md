@@ -91,18 +91,27 @@ oculta) y `src/lib/` (funciones puras de tiempo, estado, lecturas y gráficos).
 
 ### Modo demostración
 
-Con `VITE_DEMO_MODE=true` el panel usa datos simulados y deterministas, con la
+En modo demostración el panel usa datos simulados y deterministas, con la
 misma forma que los de la API, en lugar del servidor. La interfaz lo indica con
 la marca "Modo demostración" en la barra superior. Incluye personas, contactos,
 una caída reciente, un dispositivo sin reporte y uno que nunca ha reportado.
-Sin esa variable, la aplicación nunca muestra datos inventados.
 
-No lo active en producción.
+El interruptor "Datos reales" de la barra superior elige la fuente:
+
+- Apagado: modo demostración, con datos simulados.
+- Encendido: lo que los dispositivos envían a `POST /api/v1/telemetry` en el
+  backend de `VITE_API_URL`.
+
+La elección se guarda en este navegador (`solicare.dataMode`) y al cambiarla la
+página se recarga. Si nunca se ha usado el interruptor, decide `VITE_DEMO_MODE`.
+La pantalla de la clave del panel ofrece "Volver a los datos simulados" para
+quien no tenga la clave.
 
 ### Claves de `localStorage`
 
 | Clave | Contenido |
 | --- | --- |
+| `solicare.dataMode` | Fuente elegida con el interruptor "Datos reales": `demo` o `live`. Sin ella decide `VITE_DEMO_MODE`. |
 | `solicare.care.v1` | Almacén local real (personas, contactos, alertas, diario, ajustes). |
 | `solicare.demo.care.v1` | Lo mismo en modo demostración, separado para que las personas simuladas nunca se mezclen con las reales. |
 | `solicare.demo.start` | Solo en modo demostración: instante de inicio de la simulación, para que recargar la página no cree una caída nueva cada vez. Se renueva pasadas 2 h. |
@@ -117,7 +126,7 @@ borra nada del servidor.
 | Variable | Descripción |
 | --- | --- |
 | `VITE_API_URL` | URL pública del backend, sin barra final. Por defecto `http://localhost:8080`. |
-| `VITE_DEMO_MODE` | `true` activa el modo demostración. Por defecto `false`. |
+| `VITE_DEMO_MODE` | `true` abre el panel en modo demostración mientras nadie haya usado el interruptor "Datos reales" en ese navegador. Por defecto `false`. |
 
 Hay un ejemplo en `.env.example`. `vercel.json` redirige todas las rutas a
 `index.html`, de modo que los enlaces profundos (por ejemplo `/personas/abc`)
@@ -132,7 +141,7 @@ npm run build
 npm run test:e2e
 ```
 
-Para probar sin backend: `VITE_DEMO_MODE=true npm run dev`.
+Para probar sin backend: `VITE_DEMO_MODE=true npm run dev`, o apague el interruptor "Datos reales" (una elección guardada en el navegador tiene prioridad sobre la variable).
 
 ## Pruebas
 

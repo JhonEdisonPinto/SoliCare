@@ -1,4 +1,4 @@
-import { API_URL, DEMO_MODE } from './api';
+import { API_URL, getTelemetrySource } from './api';
 import { getPanelKey } from './panelKey';
 import type { PersonSummary } from './summary';
 import type { Alert } from './types';
@@ -45,7 +45,7 @@ const OUTCOMES: readonly TelegramOutcome[] = ['enviado', 'sin-configurar', 'erro
  */
 export async function requestSimulation(personId: string, category: SimulationCategory = 'caida'): Promise<SimulationStart> {
   const local = (telegram: TelegramOutcome): SimulationStart => ({ durationMs: LOCAL_SIMULATION_MS, telegram });
-  if (DEMO_MODE) return local('demo');
+  if (getTelemetrySource().kind === 'demo') return local('demo');
   const key = getPanelKey();
   try {
     const response = await fetch(`${API_URL}/api/v1/simulation/${category === 'caida' ? 'fall' : 'away'}`, {

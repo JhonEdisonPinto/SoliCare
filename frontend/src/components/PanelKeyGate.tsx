@@ -5,9 +5,9 @@ import { TextField } from './Field';
 /**
  * Shown before the panel when the server asks for the panel key. `verify` resolves to an error message in
  * Spanish when the key is refused, and does not resolve to anything useful on success (the parent then
- * replaces this screen with the panel).
+ * replaces this screen with the panel). `onUseDemo` leaves the real data for the simulation.
  */
-export function PanelKeyGate({ initialError, verify }: { initialError?: string; verify: (key: string) => Promise<string | null> }) {
+export function PanelKeyGate({ initialError, verify, onUseDemo }: { initialError?: string; verify: (key: string) => Promise<string | null>; onUseDemo: () => void }) {
   const [error, setError] = useState<string | null>(initialError ?? null);
   const [pending, setPending] = useState(false);
 
@@ -45,6 +45,9 @@ export function PanelKeyGate({ initialError, verify }: { initialError?: string; 
           <div className="form-actions">
             <button type="submit" className="btn btn--primary" disabled={pending}>
               {pending ? 'Comprobando…' : 'Entrar'}
+            </button>
+            <button type="button" className="btn btn--outline" onClick={onUseDemo}>
+              Volver a los datos simulados
             </button>
           </div>
         </form>

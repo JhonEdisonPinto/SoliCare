@@ -6,8 +6,9 @@ import '@fontsource-variable/manrope';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/views.css';
-import { DEMO_MODE, httpSource, setTelemetrySource, type TelemetrySource } from './data/api';
+import { httpSource, setTelemetrySource, type TelemetrySource } from './data/api';
 import { connectCare, unlockWithKey } from './data/careBackend';
+import { DATA_MODE, switchDataMode } from './data/dataMode';
 import { createLocalCareRepository, type CareRepository } from './data/store';
 import { DataProvider } from './data/hooks';
 import { CareErrorToaster } from './components/CareErrorToaster';
@@ -32,8 +33,8 @@ async function start() {
     );
   };
 
-  if (DEMO_MODE) {
-    // Only demo builds load the simulation; demo people live under their own storage key.
+  if (DATA_MODE === 'demo') {
+    // Only the demo source loads the simulation; demo people live under their own storage key.
     const demo = await import('./data/demo');
     source = demo.demoSource;
     setTelemetrySource(source);
@@ -56,7 +57,7 @@ async function start() {
   };
   root.render(
     <StrictMode>
-      <PanelKeyGate verify={verify} initialError={connection.hadKey ? 'La clave guardada ya no es válida. Escriba la clave actual del panel.' : undefined} />
+      <PanelKeyGate verify={verify} onUseDemo={() => switchDataMode('demo')} initialError={connection.hadKey ? 'La clave guardada ya no es válida. Escriba la clave actual del panel.' : undefined} />
     </StrictMode>,
   );
 }
